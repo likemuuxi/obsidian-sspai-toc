@@ -196,7 +196,18 @@ export default class SspaiTocPlugin extends Plugin {
             if (view.editor) { // Double check safely
                 // @ts-ignore
                 const editorScrollInfo = view.editor.getScrollInfo();
-                const userOffset = editorScrollInfo.height / 3;
+
+                // Fix TS error: getScrollInfo return type might not have height in strict definition
+                // Use scrollEl logic if available (preferred), or fallback to a default
+                let h = 800;
+                if (scrollEl) {
+                    h = scrollEl.clientHeight;
+                } else {
+                    // @ts-ignore
+                    if (editorScrollInfo.height) h = editorScrollInfo.height;
+                }
+
+                const userOffset = h / 3;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
                 // Use CodeMirror 6 API if available

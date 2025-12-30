@@ -5,6 +5,6 @@
     "minAppVersion": "0.15.0",
     "description": "A floating table of contents inspired by Sspai.",
     "author": "Muuxi",
-    "authorUrl": "https://github.com/obsidianmd/obsidian-sample-plugin",
+    "authorUrl": "https://github.com/likemuuxi/obsidian-sspai-toc",
     "isDesktopOnly": false
 }

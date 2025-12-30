@@ -1,16 +1,17 @@
 /* Sspai Style Floating TOC - Minimalist Design */
 .sspai-toc-container {
     position: absolute;
-    top: 280px;
+    top: 50%;
+    transform: translateY(-50%);
     right: 24px;
-    width: 260px;
+    width: 220px;
     /* Fixed width */
-    max-height: 35vh;
+    max-height: 50vh;
     /* Fixed height limitation */
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 100;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    /* font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; */
     font-size: 13px;
     background: transparent;
     padding: 8px 0;
@@ -36,6 +37,8 @@
     display: flex;
     align-items: center;
     padding: 6px 0;
+    padding-left: 32px;
+    /* Fixed gutter for text alignment */
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     color: transparent;
@@ -51,20 +54,27 @@
     /* Determine text visibility via parent color */
     color: inherit;
     transition: inherit;
+    /* Remove padding/margin that might cause misalignment */
 }
 
 /* The dash indicator */
 .sspai-toc-item::before {
     content: '';
-    display: inline-block;
-    flex-shrink: 0;
+    position: absolute;
+    /* Absolute positioning to not affect text flow */
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: block;
     width: 16px;
     height: 3px;
     /* Thicker dash */
     background-color: var(--text-faint, #d1d5db);
     border-radius: 4px;
     /* Rounded corners */
-    margin-right: 12px;
+    margin-right: 0;
+    /* No margin needed with absolute positioning */
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

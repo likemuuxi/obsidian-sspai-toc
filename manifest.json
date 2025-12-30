@@ -1,10 +1,11 @@
 {
     "id": "obsidian-sspai-toc",
     "name": "Sspai Style TOC",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "minAppVersion": "0.15.0",
     "description": "A floating table of contents inspired by Sspai.",
     "author": "Muuxi",
     "authorUrl": "https://github.com/likemuuxi/obsidian-sspai-toc",
+    "fundingUrl": "https://ko-fi.com/muuxi",
     "isDesktopOnly": false
 }

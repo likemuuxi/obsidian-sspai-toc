@@ -1,0 +1,221 @@
+/* Sspai Style Floating TOC - Minimalist Design */
+.sspai-toc-container {
+    position: absolute;
+    top: 280px;
+    right: 24px;
+    width: 260px;
+    /* Fixed width */
+    max-height: 35vh;
+    /* Fixed height limitation */
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 100;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    background: transparent;
+    padding: 8px 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+.sspai-toc-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sspai-toc-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.sspai-toc-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sspai-toc-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 6px 0;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: transparent;
+    /* Hide text by default */
+}
+
+/* Text styling wrapper */
+.sspai-toc-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Determine text visibility via parent color */
+    color: inherit;
+    transition: inherit;
+}
+
+/* The dash indicator */
+.sspai-toc-item::before {
+    content: '';
+    display: inline-block;
+    flex-shrink: 0;
+    width: 16px;
+    height: 3px;
+    /* Thicker dash */
+    background-color: var(--text-faint, #d1d5db);
+    border-radius: 4px;
+    /* Rounded corners */
+    margin-right: 12px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   VISIBILITY LOGIC
+   ============================================ */
+
+/* Show text for active item */
+.sspai-toc-item.active {
+    color: var(--text-normal, #1f2937);
+    font-weight: 700;
+    /* Bold active title */
+}
+
+.sspai-toc-item.active::before {
+    width: 24px;
+    height: 3px;
+    /* Consistent active thickness */
+    background-color: var(--interactive-accent, #d94d22);
+}
+
+/* Show text for parent headings (muted style) */
+/* Restore: Show parent text for context, matching Sspai style */
+.sspai-toc-item.parent-visible {
+    color: var(--text-muted, #9ca3af);
+    font-weight: 400;
+}
+
+.sspai-toc-item.parent-visible::before {
+    width: 18px;
+    background-color: var(--text-muted, #9ca3af);
+}
+
+/* Hide scrollbar completely to match Sspai minimalist look */
+.sspai-toc-container::-webkit-scrollbar {
+    display: none;
+}
+
+.sspai-toc-container {
+    scrollbar-width: none;
+}
+
+/* ============================================
+   HOVER ON CONTAINER
+   ============================================ */
+.sspai-toc-container:hover .sspai-toc-item {
+    color: var(--text-muted, #6b7280);
+}
+
+.sspai-toc-container:hover .sspai-toc-item.active {
+    color: var(--text-normal, #1f2937);
+    font-weight: 700;
+}
+
+.sspai-toc-container:hover .sspai-toc-item.parent-visible {
+    color: var(--text-muted, #6b7280);
+}
+
+/* Single item hover highlight */
+.sspai-toc-container:hover .sspai-toc-item:hover {
+    color: var(--text-normal, #1f2937);
+}
+
+.sspai-toc-container:hover .sspai-toc-item:hover::before {
+    background-color: var(--text-muted, #6b7280);
+    /* Width change removed to keep level indication stable */
+}
+
+/* ============================================
+   LEVEL-BASED INDICATOR LENGTH
+   ============================================ */
+.sspai-toc-level-1::before {
+    width: 20px;
+}
+
+.sspai-toc-level-2::before {
+    width: 14px;
+}
+
+.sspai-toc-level-3::before {
+    width: 10px;
+}
+
+.sspai-toc-level-4::before {
+    width: 8px;
+}
+
+.sspai-toc-level-5::before {
+    width: 6px;
+}
+
+.sspai-toc-level-6::before {
+    width: 4px;
+}
+
+/* Active overrides indicator length - Update: Keep level width, only change height/color */
+.sspai-toc-item.active.sspai-toc-level-1::before,
+.sspai-toc-item.active.sspai-toc-level-2::before,
+.sspai-toc-item.active.sspai-toc-level-3::before,
+.sspai-toc-item.active.sspai-toc-level-4::before,
+.sspai-toc-item.active.sspai-toc-level-5::before,
+.sspai-toc-item.active.sspai-toc-level-6::before {
+    /* width constraint removed to use level defaults */
+    height: 3px;
+}
+
+/* Parent-visible overrides - Update: Keep level width */
+.sspai-toc-item.parent-visible.sspai-toc-level-1::before,
+.sspai-toc-item.parent-visible.sspai-toc-level-2::before,
+.sspai-toc-item.parent-visible.sspai-toc-level-3::before,
+.sspai-toc-item.parent-visible.sspai-toc-level-4::before,
+.sspai-toc-item.parent-visible.sspai-toc-level-5::before,
+.sspai-toc-item.parent-visible.sspai-toc-level-6::before {
+    /* width constraint removed */
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sspai-toc-item.active,
+.sspai-toc-item.parent-visible {
+    animation: fadeInSlide 0.2s ease-out;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+.theme-dark .sspai-toc-item::before {
+    background-color: var(--text-faint, #4b5563);
+}
+
+.theme-dark .sspai-toc-item.active::before {
+    background-color: var(--interactive-accent, #d94d22);
+}
+
+.theme-dark .sspai-toc-item.parent-visible::before {
+    background-color: var(--text-muted, #6b7280);
+}
+
+.theme-dark .sspai-toc-container:hover .sspai-toc-item:hover::before {
+    background-color: var(--text-muted, #9ca3af);
+}

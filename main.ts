@@ -29,6 +29,16 @@ export default class SspaiTocPlugin extends Plugin {
             })
         );
 
+        // Update TOC when file content changes (e.g. typing headings)
+        this.registerEvent(
+            this.app.vault.on('modify', (file) => {
+                const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (view && view.file === file) {
+                    this.debouncedUpdate();
+                }
+            })
+        );
+
         // Use an interval to check if scroll listener needs to be attached, 
         // because the view might not be fully ready immediately.
         // A better way is wrapping the scroll event logic in the updateToc or a separate attacher.

@@ -1,10 +1,10 @@
 # Obsidian Sspai TOC Plugin
 
-[中文版](#中文说明) below
+[中文版](#中文说明)
 
 An Obsidian plugin that adds a floating Table of Contents styled after [Sspai (少数派)](https://sspai.com/). It features a minimalist design with intelligent active state highlighting, providing a clean and focused reading experience.
 
-![Demo](https://raw.githubusercontent.com/obsidianmd/obsidian-sample-plugin/master/header.png) *<!-- Replace with actual screenshot if available -->*
+<img width="2560" height="1380" alt="image" src="https://github.com/user-attachments/assets/9ecd2cc6-41e7-4658-80b6-326d4ade2024" />
 
 ## Features
 
@@ -42,6 +42,8 @@ Once enabled, the TOC will automatically appear on the right side of your Markdo
 # Obsidian Sspai TOC 插件 (少数派风格目录)
 
 一款模仿 [少数派 (Sspai)](https://sspai.com/) 文章目录样式的 Obsidian 插件。它采用了极简设计，通过智能的高亮和隐藏逻辑，为您提供专注、纯净的阅读体验。
+
+<img width="2560" height="1380" alt="image" src="https://github.com/user-attachments/assets/0453ca8f-ae08-44f5-aacd-1d151725938b" />
 
 ## 核心特性
 

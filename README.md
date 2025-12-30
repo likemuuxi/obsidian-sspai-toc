@@ -4,7 +4,7 @@
 
 An Obsidian plugin that adds a floating Table of Contents styled after [Sspai (少数派)](https://sspai.com/). It provides a clean, focused reading experience.
 
-<img width="2560" height="1380" alt="image" src="https://github.com/user-attachments/assets/9ecd2cc6-41e7-4658-80b6-326d4ade2024" />
+<img width="2145" height="1379" alt="image" src="https://github.com/user-attachments/assets/e0a8860f-9631-4dc8-9d9b-e16d4c747afa" />
 
 ## Features
 
@@ -32,7 +32,7 @@ An Obsidian plugin that adds a floating Table of Contents styled after [Sspai (�
 
 一款模仿 [少数派 (Sspai)](https://sspai.com/) 的 Obsidian 目录插件。极致简约，只为了让你专注于写作和阅读。
 
-<img width="2560" height="1380" alt="image" src="https://github.com/user-attachments/assets/0453ca8f-ae08-44f5-aacd-1d151725938b" />
+<img width="2145" height="1379" alt="image" src="https://github.com/user-attachments/assets/e0a8860f-9631-4dc8-9d9b-e16d4c747afa" />
 
 ## 核心功能
 

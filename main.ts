@@ -137,32 +137,27 @@ export default class SspaiTocPlugin extends Plugin {
                 contentEl = view.contentEl.querySelector('.markdown-preview-section') as HTMLElement;
             }
         }
-
         if (contentEl) {
-            // Priority 1: Check if "Readable Line Width" is enabled
-            // The class 'is-readable-line-width' is on a child element, not on the view.contentEl itself.
-            const isReadable = !!view.contentEl.querySelector('.is-readable-line-width');
-
-            if (!isReadable) {
-                this.containerEl.addClass('hidden');
-                return;
-            }
-
+            // Check available space
             const containerRect = view.containerEl.getBoundingClientRect();
             const contentRect = contentEl.getBoundingClientRect();
 
             // Calculate available space on the right
-            // view.containerEl is the whole pane
-            // We compare view right edge with content right edge
             const rightSpace = containerRect.right - contentRect.right;
-
-            // TOC stats: width 220px, right 24px. Total ~244px needed.
-            // Add a little buffer.
             const minSpaceNeeded = 260; // 220 + 24 + 16 buffer
 
-            if (rightSpace < minSpaceNeeded) {
-                this.containerEl.addClass('hidden');
+            // Check if Readable Line Width is enabled
+            // If NOT enabled (isReadable is false), content is usually wide, so we force compact mode
+            // OR if enabled but space is small, force compact mode.
+            const isReadable = !!view.contentEl.querySelector('.is-readable-line-width');
+
+            if (!isReadable || rightSpace < minSpaceNeeded) {
+                // Not enough space OR Full width mode -> Compact Mode
+                this.containerEl.addClass('compact');
+                this.containerEl.removeClass('hidden');
             } else {
+                // Enough space -> Normal Mode
+                this.containerEl.removeClass('compact');
                 this.containerEl.removeClass('hidden');
             }
         }

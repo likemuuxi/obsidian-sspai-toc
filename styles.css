@@ -75,6 +75,18 @@
     /* Remove padding/margin that might cause misalignment */
 }
 
+/* 
+.sspai-toc-text {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    background: var(--background-primary);
+    border-radius: 4px;
+} */
+
 /* The dash indicator */
 .sspai-toc-item::before {
     content: '';
@@ -86,7 +98,7 @@
 
     display: block;
     width: 16px;
-    height: 3px;
+    height: 4px;
     /* Thicker dash */
     background-color: var(--text-faint, #d1d5db);
     border-radius: 4px;
@@ -109,7 +121,7 @@
 
 .sspai-toc-item.active::before {
     width: 24px;
-    height: 3px;
+    height: 4px;
     /* Consistent active thickness */
     background-color: var(--interactive-accent, #d94d22);
 }
@@ -196,7 +208,7 @@
 .sspai-toc-item.active.sspai-toc-level-5::before,
 .sspai-toc-item.active.sspai-toc-level-6::before {
     /* width constraint removed to use level defaults */
-    height: 3px;
+    height: 4px;
 }
 
 /* Parent-visible overrides - Update: Keep level width */
@@ -247,3 +259,193 @@
 .theme-dark .sspai-toc-container:hover .sspai-toc-item:hover::before {
     background-color: var(--text-muted, #9ca3af);
 }
+
+/* ============================================
+   COMPACT MODE (Right-Aligned Minimalist)
+   ============================================ */
+
+/* 1. Base Structure for Compact Mode (Applied ALWAYS) */
+.sspai-toc-container.compact {
+    right: 12px;
+    background: transparent;
+    padding-top: 16px;
+    padding-bottom: 16px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 50vh;
+
+    transition: width 0.2s ease;
+}
+
+/* Indicators: Locked to RIGHT */
+.sspai-toc-container.compact .sspai-toc-item::before {
+    left: auto;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+
+    border: none;
+    border-radius: 99px;
+    /* Pill shape */
+
+    /* Variable width base (defaults to level specific below) */
+    background-color: var(--text-faint);
+
+    transition: all 0.2s ease;
+}
+
+/* Variable Lengths based on Header Level in Compact Mode */
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-1::before {
+    width: 24px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-2::before {
+    width: 18px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-3::before {
+    width: 14px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-4::before {
+    width: 10px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-5::before {
+    width: 8px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-6::before {
+    width: 6px;
+}
+
+/* Active Highlight: Longer and Darker */
+.sspai-toc-container.compact .sspai-toc-item.active::before {
+    width: 28px !important;
+    /* Make active slightly longer than the longest inactive (H1) */
+    background-color: var(--interactive-accent);
+    padding-right: 12px;
+    opacity: 1;
+}
+
+/* Parent Visible: Subtle */
+.sspai-toc-container.compact .sspai-toc-item.parent-visible::before {
+    background-color: var(--text-muted);
+}
+
+/* 2. STATE: COLLAPSED (Not Hovered) */
+.sspai-toc-container.compact:not(:hover) {
+    /* Use Wide Invisible Container technique to allow tooltips + scrolling */
+    width: 300px;
+    right: 12px;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    pointer-events: none;
+    /* Let clicks pass through empty space */
+}
+
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item {
+    pointer-events: auto;
+    /* Items remain clickable */
+}
+
+/* Hide Text by default */
+.sspai-toc-container.compact:not(:hover) .sspai-toc-text {
+    opacity: 0;
+    visibility: hidden;
+    display: none;
+}
+
+/* SHOW ACTIVE ITEM TOOLTIP (The requested feature) */
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text {
+    display: block;
+    position: absolute;
+    right: 40px;
+    /* Left of the bar */
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--background-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-normal);
+
+    opacity: 1;
+    visibility: visible;
+    z-index: 1001;
+}
+
+/* 3. STATE: EXPANDED (Hovered) */
+.sspai-toc-container.compact:hover {
+    width: 260px;
+    /* Give enough space */
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--background-modifier-border);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: rgba(var(--background-primary-rgb), 0.8);
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    border-radius: 16px;
+    z-index: 1000;
+}
+
+/* Reset layout for expanded items to standard Left-Aligned Outline */
+.sspai-toc-container.compact:hover .sspai-toc-item {
+    justify-content: flex-start;
+    /* Align start (left) */
+    text-align: left;
+    padding-right: 32px;
+    /* Increased separation for bars on right */
+}
+
+/* Adjust Indicators in Expanded Mode: Add margin from right edge */
+.sspai-toc-container.compact:hover .sspai-toc-item::before {
+    right: 12px;
+    /* Add spacing from container edge */
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-text {
+    opacity: 1;
+    visibility: visible;
+    display: block;
+
+    /* Ensure text is nicely spaced from the bar */
+    border-radius: 8px;
+    padding-right: 0;
+    /* Remove right padding used for right-align */
+}
+
+/* 4. EXPANDED INDENTATION (Obsidian Outline Style) */
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-1 {
+    padding-left: 12px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-2 {
+    padding-left: 24px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-3 {
+    padding-left: 36px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-4 {
+    padding-left: 48px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-5 {
+    padding-left: 60px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-6 {
+    padding-left: 72px;
+}
+
+/* ADJUST INDICATORS IN EXPANDED MODE: Move to Left or Hide? 
+   Standard Outline usually has indicators on Left. 
+   Right-aligned bars might look odd with Left-aligned text. 
+   Let's keep them on Right for now as "Status Indicators", 
+   or move them to left if it conflicts.*/

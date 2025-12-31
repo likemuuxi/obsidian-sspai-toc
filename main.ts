@@ -10,6 +10,7 @@ interface TocItem {
 export default class SspaiTocPlugin extends Plugin {
     containerEl: HTMLElement | null = null;
     activeHeaderLine: number = -1;
+    lastActiveIndex: number = -1; // Track last active TOC item for proximity-based matching
     debouncedUpdate: Debouncer<[], void>;
 
     async onload() {
@@ -197,7 +198,9 @@ export default class SspaiTocPlugin extends Plugin {
                     if (editorScrollInfo.height) h = editorScrollInfo.height;
                 }
 
-                const userOffset = h / 3;
+                // Adjust offset for source mode to match preview behavior
+                // Smaller offset means we look closer to the top of screen
+                const userOffset = h / 6;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
                 // Use CodeMirror 6 API if available
@@ -245,57 +248,66 @@ export default class SspaiTocPlugin extends Plugin {
                 }
 
                 if (activeDomHeader) {
-                    // Try to get text from 'data-heading' (Obsidian standard) or innerText
-                    let headerText = activeDomHeader.getAttribute('data-heading');
+                    // Start with innerText which matches the rendered TOC items (stripped of Markdown)
+                    let headerText = (activeDomHeader as HTMLElement).innerText;
+
+                    // Fallback to data-heading if innerText is empty? 
+                    // Usually innerText is better for matching visual content.
                     if (!headerText) {
-                        headerText = (activeDomHeader as HTMLElement).innerText;
+                        headerText = activeDomHeader.getAttribute('data-heading') || "";
                     }
 
                     if (headerText) {
                         // Find this text in our TOC items
-                        // We need to match against the 'headers' source data, but we don't have it easily here.
-                        // We can look at the DOM elements in TOC container! structure: item -> textSpan
                         const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
 
-                        // We iterate TOC items and try to match text.
-                        // Issue: Duplicates. 
-                        // Heuristic: If we are in the middle of document, we might pick wrong duplicate?
-                        // But usually people have unique headers. We pick the FIRST match for now?
-                        // Or better: We can match Level + Text.
-
-                        // Let's get the level from DOM tag
+                        // Get the level from DOM tag
                         const tagName = activeDomHeader.tagName.toLowerCase(); // h1..h6
                         const level = parseInt(tagName.replace('h', ''));
 
-                        let matchedIndex = -1;
+                        // Solution for duplicates: Use proximity-based matching
+                        // Collect all matching indices, then choose the one closest to last active position
+                        const matchingIndices: number[] = [];
 
-                        // We check the items.
                         for (let i = 0; i < items.length; i++) {
                             const item = items[i];
                             const itemLevel = parseInt(item.dataset.level || "0");
                             const itemTextSpan = item.querySelector('.sspai-toc-text') as HTMLElement;
                             const itemText = itemTextSpan ? itemTextSpan.innerText : "";
 
-                            // Loose match: check if text matches and level matches
+                            // Check if text and level match
                             if (itemLevel === level && itemText === headerText) {
-                                matchedIndex = i;
-
-                                // Can we improve duplicate handling? 
-                                // If we assume the user reads forward, maybe we match the one closest to previous active?
-                                // For now, break on first match. Logic can be improved if user complains of duplicates.
-                                // Actually, if there are duplicates, we might want to check if there's a subsequent header in DOM
-                                // that matches a subsequent header in TOC? Too complex for now.
-                                break;
+                                matchingIndices.push(i);
                             }
                         }
 
-                        // If we found a match by text, update it.
-                        if (matchedIndex >= 0) {
+                        let matchedIndex = -1;
 
+                        if (matchingIndices.length === 1) {
+                            // Only one match, use it
+                            matchedIndex = matchingIndices[0];
+                        } else if (matchingIndices.length > 1) {
+                            // Multiple matches: choose the one closest to last active index
+                            // This prevents large jumps and provides smooth scrolling experience
+                            let minDistance = Infinity;
+                            let bestMatch = matchingIndices[0];
+
+                            for (const idx of matchingIndices) {
+                                const distance = Math.abs(idx - this.lastActiveIndex);
+                                if (distance < minDistance) {
+                                    minDistance = distance;
+                                    bestMatch = idx;
+                                }
+                            }
+
+                            matchedIndex = bestMatch;
+                        }
+
+                        // If we found a match, update it
+                        if (matchedIndex >= 0) {
+                            this.lastActiveIndex = matchedIndex;
                             this.updateActiveItem(items, matchedIndex);
                             return;
-                        } else {
-
                         }
                     }
                 }
@@ -316,6 +328,9 @@ export default class SspaiTocPlugin extends Plugin {
                 }
             }
 
+            if (activeIndex >= 0) {
+                this.lastActiveIndex = activeIndex;
+            }
             this.updateActiveItem(items, activeIndex);
         }
     }

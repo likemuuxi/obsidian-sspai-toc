@@ -285,6 +285,7 @@
     top: 50%;
     transform: translateY(-50%);
 
+
     border: none;
     border-radius: 99px;
     /* Pill shape */
@@ -349,6 +350,15 @@
 .sspai-toc-container.compact:not(:hover) .sspai-toc-item {
     pointer-events: auto;
     /* Items remain clickable */
+    min-height: 32px;
+    /* Force height to match normal mode (Text + Padding) so spacing is consistent */
+    box-sizing: border-box;
+    /* Ensure padding is included */
+
+    /* FIX: Constrain trigger area to just the bars */
+    width: 50px;
+    margin-left: auto;
+    /* Align to right side of the wide container */
 }
 
 /* Hide Text by default */
@@ -358,14 +368,16 @@
     display: none;
 }
 
-/* SHOW ACTIVE ITEM TOOLTIP (The requested feature) */
-.sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text {
+/* SHOW ACTIVE & PARENT ITEM TOOLTIPS */
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text,
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
     display: block;
     position: absolute;
     right: 40px;
     /* Left of the bar */
     top: 50%;
     transform: translateY(-50%);
+
     background-color: var(--background-primary);
     padding: 4px 8px;
     border-radius: 4px;
@@ -378,6 +390,18 @@
     opacity: 1;
     visibility: visible;
     z-index: 1001;
+
+    /* FIX: Prevent tooltip from triggering hover expansion */
+    pointer-events: none;
+}
+
+/* Optional: Make parent tooltips slightly more subtle or different color? 
+   Refencing normal mode: parent-visible is usually muted.
+   Let's check normal mode .parent-visible style.
+   Line 132: color: var(--text-muted);
+*/
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
+    color: var(--text-muted);
 }
 
 /* 3. STATE: EXPANDED (Hovered) */
@@ -404,7 +428,7 @@
 
 /* Adjust Indicators in Expanded Mode: Add margin from right edge */
 .sspai-toc-container.compact:hover .sspai-toc-item::before {
-    right: 12px;
+    /* right: 12px; */
     /* Add spacing from container edge */
 }
 

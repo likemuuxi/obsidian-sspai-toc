@@ -200,7 +200,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                 // Adjust offset for source mode to match preview behavior
                 // Smaller offset means we look closer to the top of screen
-                const userOffset = h / 6;
+                const userOffset = h / 9;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
                 // Use CodeMirror 6 API if available

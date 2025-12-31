@@ -288,7 +288,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                 // Adjust offset for source mode to match preview behavior
                 // Smaller offset means we look closer to the top of screen
-                const userOffset = h / 9;
+                const userOffset = h / 18;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
                 // Use CodeMirror 6 API if available
@@ -450,8 +450,8 @@ export default class SspaiTocPlugin extends Plugin {
             }
 
             // Ensure active item is visible in TOC
-            // Use block: 'center' to keep it in middle of TOC view if possible
-            activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            // Use block: 'center' to keep it in middle of TOC view
+            activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
     }
 }

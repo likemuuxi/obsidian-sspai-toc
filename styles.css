@@ -24,6 +24,12 @@
     visibility: visible;
 }
 
+/* For long lists (>15 items), add extra padding to allow centering first/last items */
+.sspai-toc-container.is-long {
+    padding-top: 22vh;
+    padding-bottom: 22vh;
+}
+
 /* 2. Hidden State */
 .sspai-toc-container.hidden {
     opacity: 0;

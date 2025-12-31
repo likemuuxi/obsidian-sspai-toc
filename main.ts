@@ -59,38 +59,14 @@ export default class SspaiTocPlugin extends Plugin {
     updateToc() {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
-        // If no markdown view is active (e.g. sidebar), DO NOT clear TOC immediately.
-        // We only clear if we are sure the user switched TO a non-markdown view in the main area 
-        // or closed the file. But how to know?
-
-        // Simpler: If we can't find a markdown view, we just exit.
-        // The issue is if the user switches to a Graph View or Canvas, we SHOULD remove TOC.
-        // BUT if they just click sidebar, we shouldn't.
-
         if (!view) {
-            // Check if the currently attached container is still in the DOM and visible?
-            // Actually, if 'view' is null, it means the active focus is elsewhere.
-            // If we blindly remove, we lose it when focusing sidebar.
-            // PROPOSAL: Only render/update if view is valid. If not, do NOTHING.
-            // But we need to handle "Switch to Canvas" (cleanup).
-
-            // For Sspai style, maybe it's acceptable to keep it until a new view takes over?
-            // Or better: check the 'leaf' passed active-leaf-change?
             return;
         }
-
-        // Check if we are in source mode or preview mode. 
-        // For simplicity, we will attach to the view's content container.
-        const contentEl = view.contentEl;
 
         // Ensure TOC container exists
         if (!this.containerEl) {
             this.containerEl = document.createElement('div');
             this.containerEl.addClass('sspai-toc-container');
-            // Append to the view so it scrolls with it or stays fixed relative to it.
-            // Actually, we want it fixed relative to the view but scrolling independently?
-            // "Floating" usually means fixed on screen. 
-            // Let's attach to the leaf's containerEl to stay within the pane.
             view.containerEl.appendChild(this.containerEl);
         } else {
             // Re-attach if lost (e.g. view re-render)
@@ -107,10 +83,8 @@ export default class SspaiTocPlugin extends Plugin {
         const scrollEl = this.getScroller(view);
 
         if (scrollEl) {
-
             // Use registerDomEvent to manage lifecycle automatically
             this.registerDomEvent(scrollEl, 'scroll', () => {
-
                 this.highlightActiveHeader(view);
             });
         } else {
@@ -121,8 +95,6 @@ export default class SspaiTocPlugin extends Plugin {
     renderToc(view: MarkdownView) {
         if (!this.containerEl) return;
         this.containerEl.empty();
-
-
 
         const headers: TocItem[] = [];
 
@@ -151,12 +123,21 @@ export default class SspaiTocPlugin extends Plugin {
             textSpan.innerText = header.text;
 
             // Click to scroll
-            item.onClickEvent((event) => {
+            item.onClickEvent(async (event) => {
                 event.preventDefault();
-                // Use official Obsidian API to navigate to the header
-                // openLinkText(linktext: string, sourcePath: string, newLeaf?: PaneType | boolean, openViewState?: OpenViewState)
-                const linkText = "#" + header.text;
-                this.app.workspace.openLinkText(linkText, view.file.path);
+
+                if (!view.file) return;
+
+                const mode = view.getMode();
+                const line = header.line;
+
+                // Use eState for precise line-based navigation (solves duplicate headers)
+                await view.leaf.openFile(view.file, {
+                    eState: {
+                        line: line,
+                        mode: mode
+                    }
+                });
             });
 
             // Store line and level for highlighting
@@ -169,7 +150,6 @@ export default class SspaiTocPlugin extends Plugin {
 
     getScroller(view: MarkdownView): HTMLElement | null {
         const mode = view.getMode();
-
 
         if (mode === 'source') {
             // Live Preview or Source Mode

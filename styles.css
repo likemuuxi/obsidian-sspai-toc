@@ -1,4 +1,6 @@
 /* Sspai Style Floating TOC - Minimalist Design */
+
+/* 1. Default Style */
 .sspai-toc-container {
     position: absolute;
     top: 50%;
@@ -17,6 +19,16 @@
     padding: 8px 0;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 2. Hidden State */
+.sspai-toc-container.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .sspai-toc-container::-webkit-scrollbar {

@@ -12,6 +12,7 @@ export default class SspaiTocPlugin extends Plugin {
     activeHeaderLine: number = -1;
     lastActiveIndex: number = -1; // Track last active TOC item for proximity-based matching
     debouncedUpdate: Debouncer<[], void>;
+    observer: MutationObserver | null = null;
 
     async onload() {
         console.log('Loading Sspai TOC Plugin');
@@ -27,6 +28,12 @@ export default class SspaiTocPlugin extends Plugin {
         this.registerEvent(
             this.app.workspace.on('layout-change', () => {
                 this.updateToc();
+            })
+        );
+
+        this.registerEvent(
+            this.app.workspace.on('resize', () => {
+                this.debouncedUpdate();
             })
         );
 
@@ -48,9 +55,18 @@ export default class SspaiTocPlugin extends Plugin {
     onunload() {
         console.log('Unloading Sspai TOC Plugin');
         this.removeToc();
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
+        }
     }
 
     removeToc() {
+        if (this.observer) {
+            this.observer.disconnect();
+            // Don't null observer here, as we might reuse it or re-init it. 
+            // Actually best to stick to pattern: cleanup on update.
+        }
         if (this.containerEl) {
             this.containerEl.remove();
             this.containerEl = null;
@@ -78,6 +94,78 @@ export default class SspaiTocPlugin extends Plugin {
 
         this.renderToc(view);
         this.registerScrollEvent(view);
+        this.checkResponsiveVisibility(view);
+
+        // Setup MutationObserver to watch for class changes (Readable Line Width toggle)
+        if (this.observer) {
+            this.observer.disconnect();
+        }
+
+        // Target: We need to watch the element that gets the 'is-readable-line-width' class.
+        // It's usually a child of contentEl (markdown-source-view etc)
+        const target = view.contentEl.querySelector('.markdown-source-view, .markdown-preview-view');
+        if (target) {
+            this.observer = new MutationObserver((mutations) => {
+                // Check if class attribute changed
+                for (const mutation of mutations) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        this.checkResponsiveVisibility(view);
+                    }
+                }
+            });
+            this.observer.observe(target, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
+
+    checkResponsiveVisibility(view: MarkdownView) {
+        if (!this.containerEl) return;
+
+        const mode = view.getMode();
+        let contentEl: HTMLElement | null = null;
+
+        if (mode === 'source') {
+            // Source mode content container
+            contentEl = view.contentEl.querySelector('.cm-contentContainer') as HTMLElement;
+            if (!contentEl) {
+                // Fallback
+                contentEl = view.contentEl.querySelector('.cm-sizer') as HTMLElement;
+            }
+        } else {
+            // Reading mode content container
+            contentEl = view.contentEl.querySelector('.markdown-preview-sizer') as HTMLElement;
+            if (!contentEl) {
+                contentEl = view.contentEl.querySelector('.markdown-preview-section') as HTMLElement;
+            }
+        }
+
+        if (contentEl) {
+            // Priority 1: Check if "Readable Line Width" is enabled
+            // The class 'is-readable-line-width' is on a child element, not on the view.contentEl itself.
+            const isReadable = !!view.contentEl.querySelector('.is-readable-line-width');
+
+            if (!isReadable) {
+                this.containerEl.addClass('hidden');
+                return;
+            }
+
+            const containerRect = view.containerEl.getBoundingClientRect();
+            const contentRect = contentEl.getBoundingClientRect();
+
+            // Calculate available space on the right
+            // view.containerEl is the whole pane
+            // We compare view right edge with content right edge
+            const rightSpace = containerRect.right - contentRect.right;
+
+            // TOC stats: width 220px, right 24px. Total ~244px needed.
+            // Add a little buffer.
+            const minSpaceNeeded = 260; // 220 + 24 + 16 buffer
+
+            if (rightSpace < minSpaceNeeded) {
+                this.containerEl.addClass('hidden');
+            } else {
+                this.containerEl.removeClass('hidden');
+            }
+        }
     }
 
     registerScrollEvent(view: MarkdownView) {

@@ -11,6 +11,7 @@ export default class SspaiTocPlugin extends Plugin {
     containerEl: HTMLElement | null = null;
     activeHeaderLine: number = -1;
     lastActiveIndex: number = -1; // Track last active TOC item for proximity-based matching
+    lastHeadings: TocItem[] = []; // Cache for comparing structure changes
     debouncedUpdate: Debouncer<[], void>;
     observer: MutationObserver | null = null;
 
@@ -92,7 +93,19 @@ export default class SspaiTocPlugin extends Plugin {
             }
         }
 
-        this.renderToc(view);
+        const newHeaders = this.getTocHeaders(view);
+
+        // Diff check
+        if (this.areHeadersStructurallyEqual(this.lastHeadings, newHeaders)) {
+            // Optimization: Structure is same, just update line numbers
+            this.updateTocPositions(newHeaders);
+            this.lastHeadings = newHeaders; // Update cache with new lines
+            this.highlightActiveHeader(view);
+        } else {
+            // Structure changed (added/removed/renamed), full render
+            this.renderToc(view, newHeaders);
+        }
+
         this.registerScrollEvent(view);
         this.checkResponsiveVisibility(view);
 
@@ -115,6 +128,50 @@ export default class SspaiTocPlugin extends Plugin {
             });
             this.observer.observe(target, { attributes: true, attributeFilter: ['class'] });
         }
+    }
+
+    getTocHeaders(view: MarkdownView): TocItem[] {
+        const file = view.file;
+        if (!file) return [];
+        const cache = this.app.metadataCache.getFileCache(file);
+        if (!cache || !cache.headings) return [];
+
+        return cache.headings.map(h => ({
+            level: h.level,
+            text: h.heading,
+            line: h.position.start.line,
+            id: h.heading.replace(/\s+/g, '-').toLowerCase()
+        }));
+    }
+
+    areHeadersStructurallyEqual(oldHeaders: TocItem[], newHeaders: TocItem[]): boolean {
+        if (oldHeaders.length !== newHeaders.length) return false;
+
+        for (let i = 0; i < oldHeaders.length; i++) {
+            const h1 = oldHeaders[i];
+            const h2 = newHeaders[i];
+            // Compare text and level. Ignore line number for structure check.
+            if (h1.level !== h2.level || h1.text !== h2.text) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    updateTocPositions(headers: TocItem[]) {
+        if (!this.containerEl) return;
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+
+        if (items.length !== headers.length) {
+            // Fallback, shouldn't happen if check passed
+            return;
+        }
+
+        items.forEach((item, index) => {
+            if (headers[index]) {
+                item.dataset.line = headers[index].line.toString();
+            }
+        });
     }
 
     checkResponsiveVisibility(view: MarkdownView) {
@@ -176,27 +233,18 @@ export default class SspaiTocPlugin extends Plugin {
         }
     }
 
-    renderToc(view: MarkdownView) {
+    renderToc(view: MarkdownView, headers?: TocItem[]) {
         if (!this.containerEl) return;
+
+        // If headers not provided, fetch them
+        if (!headers) {
+            headers = this.getTocHeaders(view);
+        }
+
         this.containerEl.empty();
 
-        const headers: TocItem[] = [];
-
-        // Parse metadata cache for headers
-        const file = view.file;
-        if (!file) return;
-
-        const cache = this.app.metadataCache.getFileCache(file);
-        if (!cache || !cache.headings) return;
-
-        cache.headings.forEach(h => {
-            headers.push({
-                level: h.level,
-                text: h.heading,
-                line: h.position.start.line,
-                id: h.heading.replace(/\s+/g, '-').toLowerCase() // Simple slug
-            });
-        });
+        // Update lastHeadings if we are doing a full render
+        this.lastHeadings = headers;
 
         headers.forEach((header, index) => {
             const item = this.containerEl!.createDiv('sspai-toc-item');
@@ -204,7 +252,7 @@ export default class SspaiTocPlugin extends Plugin {
 
             // Wrap text for better ellipsis handling
             const textSpan = item.createSpan('sspai-toc-text');
-            textSpan.innerText = header.text;
+            textSpan.innerText = this.stripMarkdown(header.text);
 
             // Click to scroll
             item.onClickEvent(async (event) => {
@@ -213,7 +261,9 @@ export default class SspaiTocPlugin extends Plugin {
                 if (!view.file) return;
 
                 const mode = view.getMode();
-                const line = header.line;
+                // Dynamic lookup: fetch the latest line number from the DOM element's dataset
+                // because line numbers might have shifted since the render time if we only updated attributes
+                const line = parseInt(item.dataset.line || "0");
 
                 // Use eState for precise line-based navigation (solves duplicate headers)
                 await view.leaf.openFile(view.file, {
@@ -448,5 +498,31 @@ export default class SspaiTocPlugin extends Plugin {
             // Use block: 'center' to keep it in middle of TOC view
             activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
+    }
+
+    stripMarkdown(text: string): string {
+        // 1. Links: [text](url) -> text
+        let clean = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+        // 2. Bold/Italic: **text**, *text*, __text__, _text_
+        // Note: This is a simple regex and might not handle nested or complex cases perfectly, 
+        // but sufficient for TOC display.
+        clean = clean.replace(/(\*\*|__)(.*?)\1/g, '$2'); // Bold
+        clean = clean.replace(/(\*|_)(.*?)\1/g, '$2');   // Italic
+
+        // 3. Code: `text` -> text
+        clean = clean.replace(/`([^`]+)`/g, '$1');
+
+        // 4. Images: ![alt](url) -> alt (or remove if empty)
+        // actually image syntax is ![alt](url), closely related to links but starting with !
+        // The link regex above might leave the '!' if not handled.
+
+        // Let's handle images specifically before links if we want to remove them or keep alt
+        // Re-run for images specifically: ![alt](url) -> alt
+        clean = clean.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
+
+        // Clean up remaining brackets if any (optional)
+
+        return clean;
     }
 }

@@ -260,6 +260,12 @@ export default class SspaiTocPlugin extends Plugin {
 
                 if (!view.file) return;
 
+                // Update lastActiveIndex immediately so that when the scroll event fires,
+                // the proximity check favors this item (handling duplicates correctly).
+                this.lastActiveIndex = index;
+                // Optional prompt for immediate feedback, though the scroll event will trigger updateActiveItem shortly
+                // this.updateActiveItem(Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[], index);
+
                 const mode = view.getMode();
                 // Dynamic lookup: fetch the latest line number from the DOM element's dataset
                 // because line numbers might have shifted since the render time if we only updated attributes
@@ -333,7 +339,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                 // Adjust offset for source mode to match preview behavior
                 // Smaller offset means we look closer to the top of screen
-                const userOffset = h / 18;
+                const userOffset = h / 3;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
                 // Use CodeMirror 6 API if available
@@ -354,7 +360,7 @@ export default class SspaiTocPlugin extends Plugin {
         } else if (mode === 'preview') {
             // Reading Mode (Preview)
             if (scrollEl) {
-                const userOffset = scrollEl.clientHeight / 3;
+                const userOffset = scrollEl.clientHeight / 2;
                 const containerRect = scrollEl.getBoundingClientRect();
                 const targetTop = containerRect.top + userOffset;
 

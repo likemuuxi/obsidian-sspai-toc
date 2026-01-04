@@ -11,6 +11,15 @@ settings:
 		type: variable-number
 		format: px
 		default: 13
+    
+    -
+		id: compact-toc-container-width
+		title: Compact TOC container width
+		description: The size of TOC compact container width.
+		type: variable-number
+		format: px
+		default: 260
+
 
 */
 
@@ -18,6 +27,7 @@ settings:
 
 :root {
     --toc-item-text-size: 13px;
+    --compact-toc-container-width: 260px;
 }
 
 /* 1. Default Style */
@@ -423,7 +433,7 @@ settings:
 
 /* 3. STATE: EXPANDED (Hovered) */
 .sspai-toc-container.compact:hover {
-    width: 260px;
+    width: var(--compact-toc-container-width);
     /* Give enough space */
     backdrop-filter: blur(10px);
     border: 1px solid var(--background-modifier-border);

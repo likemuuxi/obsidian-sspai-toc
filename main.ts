@@ -14,6 +14,7 @@ export default class SspaiTocPlugin extends Plugin {
     lastHeadings: TocItem[] = []; // Cache for comparing structure changes
     debouncedUpdate: Debouncer<[], void>;
     observer: MutationObserver | null = null;
+    blockScrollEvent: boolean = false;
 
     async onload() {
         console.log('Loading Sspai TOC Plugin');
@@ -106,7 +107,7 @@ export default class SspaiTocPlugin extends Plugin {
             this.renderToc(view, newHeaders);
         }
 
-        this.registerScrollEvent(view);
+        this.registerDomEvents(view);
         this.checkResponsiveVisibility(view);
 
         // Setup MutationObserver to watch for class changes (Readable Line Width toggle)
@@ -220,16 +221,47 @@ export default class SspaiTocPlugin extends Plugin {
         }
     }
 
-    registerScrollEvent(view: MarkdownView) {
+    registerDomEvents(view: MarkdownView) {
         const scrollEl = this.getScroller(view);
 
         if (scrollEl) {
             // Use registerDomEvent to manage lifecycle automatically
             this.registerDomEvent(scrollEl, 'scroll', () => {
-                this.highlightActiveHeader(view);
+                if (!this.blockScrollEvent) {
+                    this.highlightActiveHeader(view);
+                }
             });
-        } else {
 
+            // Reset block flag on user interaction
+            const resetBlock = () => {
+                this.blockScrollEvent = false;
+            };
+            this.registerDomEvent(scrollEl, 'mousedown', resetBlock);
+            this.registerDomEvent(scrollEl, 'wheel', resetBlock);
+            this.registerDomEvent(scrollEl, 'touchstart', resetBlock);
+            this.registerDomEvent(scrollEl, 'keydown', resetBlock);
+        }
+
+        if (view.getMode() === 'source') {
+            const handler = () => this.handleCursorActivity(view);
+            // Listen for cursor movement and interaction
+            this.registerDomEvent(view.contentEl, 'keyup', handler);
+            this.registerDomEvent(view.contentEl, 'mouseup', handler);
+            this.registerDomEvent(view.contentEl, 'touchend', handler);
+            this.registerDomEvent(view.contentEl, 'click', handler);
+        }
+    }
+
+    handleCursorActivity(view: MarkdownView) {
+        if (view.getMode() === 'source') {
+            // @ts-ignore
+            if (view.editor) {
+                // @ts-ignore
+                const cursor = view.editor.getCursor();
+                if (cursor) {
+                    this.highlightActiveHeader(view, cursor.line);
+                }
+            }
         }
     }
 
@@ -271,6 +303,12 @@ export default class SspaiTocPlugin extends Plugin {
                 // because line numbers might have shifted since the render time if we only updated attributes
                 const line = parseInt(item.dataset.line || "0");
 
+                this.blockScrollEvent = true;
+                if (this.containerEl) {
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    this.updateActiveItem(items, index);
+                }
+
                 // Use eState for precise line-based navigation (solves duplicate headers)
                 await view.leaf.openFile(view.file, {
                     eState: {
@@ -284,8 +322,6 @@ export default class SspaiTocPlugin extends Plugin {
             item.dataset.line = header.line.toString();
             item.dataset.level = header.level.toString();
         });
-
-        this.highlightActiveHeader(view);
     }
 
     getScroller(view: MarkdownView): HTMLElement | null {
@@ -313,17 +349,17 @@ export default class SspaiTocPlugin extends Plugin {
         return null;
     }
 
-    highlightActiveHeader(view: MarkdownView) {
+    highlightActiveHeader(view: MarkdownView, specificLine?: number) {
         if (!this.containerEl) return;
 
-        let currentLine = 0;
+        let currentLine = specificLine ?? -1;
         const scrollEl = this.getScroller(view);
         const mode = view.getMode();
 
         // Editor Mode (Source / Live Preview)
         if (mode === 'source') {
             // @ts-ignore
-            if (view.editor) { // Double check safely
+            if (view.editor && currentLine === -1) { // Double check safely and only if no specific line provided
                 // @ts-ignore
                 const editorScrollInfo = view.editor.getScrollInfo();
 
@@ -339,30 +375,50 @@ export default class SspaiTocPlugin extends Plugin {
 
                 // Adjust offset for source mode to match preview behavior
                 // Smaller offset means we look closer to the top of screen
-                const userOffset = h / 3;
+                const userOffset = h / 3000;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
-                // Use CodeMirror 6 API if available
-                // @ts-ignore
-                if (view.editor.cm) {
-                    // @ts-ignore
-                    const cm = view.editor.cm;
+                const editorAny = view.editor as any;
+                if (editorAny.cm) {
+                    const cm = editorAny.cm;
                     try {
-                        const block = cm.lineBlockAtHeight(targetHeight);
-                        if (block) {
-                            currentLine = cm.state.doc.lineAt(block.from).number;
-                        }
-                    } catch (e) {
+                        // Use screen coordinates (posAtCoords) for accurate "visual top" detection
+                        // This bypasses issues with document padding, inline titles, etc.
+                        if (scrollEl) {
+                            const rect = scrollEl.getBoundingClientRect();
+                            const topY = rect.top + (userOffset || 0);
+                            // X position: just slightly inside the content
+                            const padX = rect.left + 20;
 
+                            const pos = cm.posAtCoords({ x: padX, y: topY });
+                            if (pos !== null) {
+                                currentLine = cm.state.doc.lineAt(pos).number;
+                            }
+                        } else {
+                            // Fallback to old lineBlockAtHeight if scrollEl missing (unlikely)
+                            const block = cm.lineBlockAtHeight(targetHeight);
+                            if (block) {
+                                currentLine = cm.state.doc.lineAt(block.from).number;
+                            }
+                        }
+
+                        // if (currentLine !== -1) {
+                        //     const lineContent = cm.state.doc.line(currentLine).text;
+                        //     console.log({
+                        //         "currentLine": currentLine,
+                        //         "lineContent": lineContent
+                        //     });
+                        // }
+                    } catch (e) {
                     }
                 }
             }
         } else if (mode === 'preview') {
             // Reading Mode (Preview)
             if (scrollEl) {
-                const userOffset = scrollEl.clientHeight / 2;
+                const userOffset = scrollEl.clientHeight / 2000;
                 const containerRect = scrollEl.getBoundingClientRect();
-                const targetTop = containerRect.top + userOffset;
+                const targetTop = containerRect.top + userOffset - 20;
 
                 // Strategy: Text-Based Header Matching (Best for Virtualization + Missing Line Numbers)
                 // We find the header in DOM that is effectively "active" (above reading line)
@@ -374,17 +430,27 @@ export default class SspaiTocPlugin extends Plugin {
                 let activeDomHeader: Element | null = null;
 
                 // Find the header closest to the target line (but above it)
+                // console.log(`[TOC Debug] targetTop: ${targetTop}`);
                 for (let i = 0; i < domHeaders.length; i++) {
-                    const headerEl = domHeaders[i];
-                    const rect = headerEl.getBoundingClientRect();
+                    const rect = domHeaders[i].getBoundingClientRect();
+
+                    // Only log if close to boundary to avoid spam
+                    if (Math.abs(rect.top - targetTop) < 150) {
+                        const headerText = (domHeaders[i] as HTMLElement).innerText;
+                        // console.log(`[TOC Debug] Near Boundary - Header: "${headerText}", rect.top: ${rect.top}, targetTop: ${targetTop}, isRead: ${rect.top <= targetTop}`);
+                    }
 
                     if (rect.top <= targetTop) {
-                        activeDomHeader = headerEl;
+                        // 当前标题已读完，尝试选中下一个
+                        activeDomHeader = domHeaders[i + 1] || domHeaders[i];
                     } else {
-                        // This header is below, so the previous one (activeDomHeader) is the winner.
                         break;
                     }
                 }
+
+                // if (activeDomHeader) {
+                //     console.log(`[TOC Debug] Final Active: "${(activeDomHeader as HTMLElement).innerText}"`);
+                // }
 
                 if (activeDomHeader) {
                     // Start with innerText which matches the rendered TOC items (stripped of Markdown)
@@ -458,13 +524,33 @@ export default class SspaiTocPlugin extends Plugin {
             const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
             let activeIndex = -1;
 
+            // let lastMatchedIndex = -1;
+
             for (let i = 0; i < items.length; i++) {
                 const itemLine = parseInt(items[i].dataset.line || "0");
+
                 if (itemLine <= currentLine) {
-                    activeIndex = i;
+                    // lastMatchedIndex = i;
+                    activeIndex = (specificLine !== undefined) ? i : i + 1;
                 } else {
                     break;
                 }
+            }
+
+            // 只在最后打印一次
+            // if (lastMatchedIndex >= 0) {
+            //     const item = items[lastMatchedIndex];
+            //     const itemText = (item.querySelector('.sspai-toc-text') as HTMLElement)?.innerText;
+            //     const itemLine = parseInt(item.dataset.line || "0");
+
+            //     console.log(
+            //         `[TOC Debug] Item "${itemText}" Line: ${itemLine}, CurrentLine: ${currentLine}`
+            //     );
+            // }
+
+            // 越界保护
+            if (activeIndex >= items.length) {
+                activeIndex = items.length - 1;
             }
 
             if (activeIndex >= 0) {

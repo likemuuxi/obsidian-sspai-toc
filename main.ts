@@ -416,6 +416,16 @@ export default class SspaiTocPlugin extends Plugin {
         } else if (mode === 'preview') {
             // Reading Mode (Preview)
             if (scrollEl) {
+                // Handle Top of Document: force highlight first item if scrolled to top
+                if (scrollEl.scrollTop < 50) {
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    if (items.length > 0) {
+                        this.lastActiveIndex = 0;
+                        this.updateActiveItem(items, 0);
+                        return; // Skip complex DOM calculation
+                    }
+                }
+
                 const userOffset = scrollEl.clientHeight / 2000;
                 const containerRect = scrollEl.getBoundingClientRect();
                 const targetTop = containerRect.top + userOffset - 20;
@@ -551,6 +561,16 @@ export default class SspaiTocPlugin extends Plugin {
             // 越界保护
             if (activeIndex >= items.length) {
                 activeIndex = items.length - 1;
+            }
+
+            // Handle Top of Document: force highlight first item if scrolled to top
+            // @ts-ignore
+            if (view.editor) {
+                // @ts-ignore
+                const scrollInfo = view.editor.getScrollInfo();
+                if (scrollInfo && scrollInfo.top < 50) {
+                    activeIndex = 0;
+                }
             }
 
             if (activeIndex >= 0) {

@@ -11,7 +11,20 @@ settings:
 		type: variable-number
 		format: px
 		default: 13
-    
+    -
+		id: toc-container-height
+		title: TOC container height
+		description: The size of TOC container height (include compact mode).
+		type: variable-number
+		format: vh
+		default: 50
+    -
+		id: toc-container-width
+		title: TOC container width
+		description: The size of TOC container width.
+		type: variable-number
+		format: px
+		default: 220
     -
 		id: compact-toc-container-width
 		title: Compact TOC container width
@@ -20,13 +33,14 @@ settings:
 		format: px
 		default: 260
 
-
 */
 
 /* Sspai Style Floating TOC - Minimalist Design */
 
 :root {
     --toc-item-text-size: 13px;
+    --toc-container-height: 50vh;
+    --toc-container-width: 220px;
     --compact-toc-container-width: 260px;
 }
 
@@ -36,9 +50,9 @@ settings:
     top: 50%;
     transform: translateY(-50%);
     right: 24px;
-    width: 220px;
+    width: var(--toc-container-width);
     /* Fixed width */
-    max-height: 50vh;
+    max-height: var(--toc-container-height);
     /* Fixed height limitation */
     overflow-y: auto;
     overflow-x: hidden;
@@ -304,7 +318,7 @@ settings:
 
     overflow-x: hidden;
     overflow-y: auto;
-    max-height: 50vh;
+    max-height: var(--toc-container-height);
 }
 
 /* Indicators: Locked to RIGHT */
@@ -434,6 +448,7 @@ settings:
 /* 3. STATE: EXPANDED (Hovered) */
 .sspai-toc-container.compact:hover {
     width: var(--compact-toc-container-width);
+    max-height: var(--toc-container-height);
     /* Give enough space */
     backdrop-filter: blur(10px);
     border: 1px solid var(--background-modifier-border);

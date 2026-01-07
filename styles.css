@@ -32,7 +32,7 @@ settings:
 		type: variable-number
 		format: px
 		default: 260
-
+        
 */
 
 /* Sspai Style Floating TOC - Minimalist Design */
@@ -382,7 +382,7 @@ settings:
     right: 12px;
     background: transparent;
     box-shadow: none;
-    border: none;
+    border: 1px solid transparent;
     pointer-events: none;
     /* Let clicks pass through empty space */
 }
@@ -421,7 +421,7 @@ settings:
 
     background-color: var(--background-primary);
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
     white-space: nowrap;
@@ -446,15 +446,18 @@ settings:
 }
 
 /* 3. STATE: EXPANDED (Hovered) */
+/* Disable transition during expansion for instant effect */
+.sspai-toc-container.compact:hover .sspai-toc-item {
+    transition: none !important;
+}
+
 .sspai-toc-container.compact:hover {
     width: var(--compact-toc-container-width);
     max-height: var(--toc-container-height);
-    /* Give enough space */
-    backdrop-filter: blur(10px);
+    background-color: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    background-color: rgba(var(--background-primary-rgb), 0.8);
-    border-radius: 16px;
+    border-radius: 12px;
     z-index: 1000;
 }
 
@@ -473,7 +476,7 @@ settings:
 
 /* Adjust Indicators in Expanded Mode: Add margin from right edge */
 .sspai-toc-container.compact:hover .sspai-toc-item::before {
-    /* right: 12px; */
+    right: 0px;
     /* Add spacing from container edge */
 }
 
@@ -512,9 +515,3 @@ settings:
 .sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-6 {
     padding-left: 72px;
 }
-
-/* ADJUST INDICATORS IN EXPANDED MODE: Move to Left or Hide? 
-   Standard Outline usually has indicators on Left. 
-   Right-aligned bars might look odd with Left-aligned text. 
-   Let's keep them on Right for now as "Status Indicators", 
-   or move them to left if it conflicts.*/

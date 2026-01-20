@@ -33,6 +33,22 @@ settings:
 		format: px
 		default: 260
 	-
+		id: toc-enable-level-style
+		title: Enable Level-based Styling (Transparency)
+		description: Use transparency and font weight to distinguish levels when hovering.
+		type: class-toggle
+		default: false
+    -
+		id: toc-enable-level-padding
+		title: Enable Level-based Padding
+		description: Use padding to distinguish levels when hovering.
+		type: class-toggle
+		default: false
+
+*/
+
+/* 
+    -
 		id: toc-heading-colors
 		title: Heading Colors
 		type: heading
@@ -80,7 +96,6 @@ settings:
 		opacity: false
 		format: hex
 		default: '#202020'
-        
 */
 
 /* Sspai Style Floating TOC - Minimalist Design */
@@ -261,6 +276,11 @@ settings:
     color: var(--text-normal, #1f2937);
 }
 
+/* .sspai-toc-container:hover .sspai-toc-item:hover {
+    color: var(--interactive-accent) !important;
+    opacity: 1 !important;
+} */
+
 .sspai-toc-container:hover .sspai-toc-item:hover::before {
     background-color: var(--text-muted, #6b7280);
     /* Width change removed to keep level indication stable */
@@ -315,64 +335,123 @@ settings:
 }
 
 /* ============================================
+   LEVEL-BASED STYLING (Minimal / Transparency Default)
+   ============================================ */
+
+/* Base Colors for Levels when Hovered (Applied only when enabled) */
+.toc-enable-level-style .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-1 {
+    color: var(--text-normal);
+    font-weight: 600;
+    opacity: 1;
+}
+
+.toc-enable-level-style .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-2 {
+    color: var(--text-normal);
+    opacity: 0.9;
+}
+
+.toc-enable-level-style .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-3 {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
+
+.toc-enable-level-style .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-4 {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.toc-enable-level-style .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-5 {
+    color: var(--text-faint);
+    opacity: 0.6;
+}
+
+.toc-enable-level-style .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-6 {
+    color: var(--text-faint);
+    opacity: 0.5;
+}
+
+/* ============================================
+   LEVEL-BASED STYLING (Padding)
+   ============================================ */
+
+.toc-enable-level-padding .sspai-toc-item.sspai-toc-level-2 .sspai-toc-text {
+    padding-left: 0.5em;
+}
+
+.toc-enable-level-padding .sspai-toc-item.sspai-toc-level-3 .sspai-toc-text {
+    padding-left: 1em;
+}
+
+.toc-enable-level-padding .sspai-toc-item.sspai-toc-level-4 .sspai-toc-text {
+    padding-left: 1.5em;
+}
+
+.toc-enable-level-padding .sspai-toc-item.sspai-toc-level-5 .sspai-toc-text {
+    padding-left: 1.75em;
+}
+
+.toc-enable-level-padding .sspai-toc-item.sspai-toc-level-6 .sspai-toc-text {
+    padding-left: 2em;
+}
+
+/* ============================================
    LEVEL-BASED COLORS (Overrides)
    ============================================ */
 /* Only show level colors when container is hovered (Expanded TOC) */
-.sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-1 {
-    color: var(--toc-h1-color, var(--text-muted));
+
+/* .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-1 {
+    color: var(--toc-h1-color);
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-2 {
-    color: var(--toc-h2-color, var(--text-muted));
+    color: var(--toc-h2-color);
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-3 {
-    color: var(--toc-h3-color, var(--text-muted));
+    color: var(--toc-h3-color);
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-4 {
-    color: var(--toc-h4-color, var(--text-muted));
+    color: var(--toc-h4-color);
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-5 {
-    color: var(--toc-h5-color, var(--text-muted));
+    color: var(--toc-h5-color);
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-6 {
-    color: var(--toc-h6-color, var(--text-muted));
+    color: var(--toc-h6-color);
 }
 
-/* Ensure the specific hovered item maintains the color (or consider adding brightness/contrast if needed) */
-/* This rule ensures that even when hovering a specific item, it keeps its level color instead of reverting to generic text color */
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-1:hover {
-    color: var(--toc-h1-color, var(--text-normal));
+    color: var(--toc-h1-color);
     opacity: 1;
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-2:hover {
-    color: var(--toc-h2-color, var(--text-normal));
+    color: var(--toc-h2-color);
     opacity: 1;
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-3:hover {
-    color: var(--toc-h3-color, var(--text-normal));
+    color: var(--toc-h3-color);
     opacity: 1;
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-4:hover {
-    color: var(--toc-h4-color, var(--text-normal));
+    color: var(--toc-h4-color);
     opacity: 1;
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-5:hover {
-    color: var(--toc-h5-color, var(--text-normal));
+    color: var(--toc-h5-color);
     opacity: 1;
 }
 
 .sspai-toc-container:hover .sspai-toc-item.sspai-toc-level-6:hover {
-    color: var(--toc-h6-color, var(--text-normal));
+    color: var(--toc-h6-color);
     opacity: 1;
-}
+} */
 
 /* ============================================
    ANIMATIONS

@@ -1,24 +1,32 @@
-import { Plugin, MarkdownView, WorkspaceLeaf, Debouncer, debounce } from 'obsidian';
+import { Plugin, MarkdownView, Debouncer, debounce } from 'obsidian';
 
 interface TocItem {
     level: number;
     text: string;
     line: number;
-    id: string; // generated id for anchor
+    id: string;
+}
+
+interface CodeMirrorEditor {
+    posAtCoords(coords: { x: number, y: number }): number | null;
+    lineBlockAtHeight(height: number): { from: number } | null;
+    state: {
+        doc: {
+            lineAt(pos: number): { number: number };
+        };
+    };
 }
 
 export default class SspaiTocPlugin extends Plugin {
     containerEl: HTMLElement | null = null;
     activeHeaderLine: number = -1;
-    lastActiveIndex: number = -1; // Track last active TOC item for proximity-based matching
-    lastHeadings: TocItem[] = []; // Cache for comparing structure changes
+    lastActiveIndex: number = -1;
+    lastHeadings: TocItem[] = [];
     debouncedUpdate: Debouncer<[], void>;
     observer: MutationObserver | null = null;
     blockScrollEvent: boolean = false;
 
-    async onload() {
-        console.log('Loading Sspai TOC Plugin');
-
+    onload() {
         this.debouncedUpdate = debounce(this.updateToc.bind(this), 100, true);
 
         this.registerEvent(
@@ -39,7 +47,6 @@ export default class SspaiTocPlugin extends Plugin {
             })
         );
 
-        // Update TOC when file content changes (e.g. typing headings)
         this.registerEvent(
             this.app.vault.on('modify', (file) => {
                 const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -48,14 +55,9 @@ export default class SspaiTocPlugin extends Plugin {
                 }
             })
         );
-
-        // Use an interval to check if scroll listener needs to be attached, 
-        // because the view might not be fully ready immediately.
-        // A better way is wrapping the scroll event logic in the updateToc or a separate attacher.
     }
 
     onunload() {
-        console.log('Unloading Sspai TOC Plugin');
         this.removeToc();
         if (this.observer) {
             this.observer.disconnect();
@@ -66,8 +68,6 @@ export default class SspaiTocPlugin extends Plugin {
     removeToc() {
         if (this.observer) {
             this.observer.disconnect();
-            // Don't null observer here, as we might reuse it or re-init it. 
-            // Actually best to stick to pattern: cleanup on update.
         }
         if (this.containerEl) {
             this.containerEl.remove();
@@ -82,13 +82,11 @@ export default class SspaiTocPlugin extends Plugin {
             return;
         }
 
-        // Ensure TOC container exists
         if (!this.containerEl) {
             this.containerEl = document.createElement('div');
             this.containerEl.addClass('sspai-toc-container');
             view.containerEl.appendChild(this.containerEl);
         } else {
-            // Re-attach if lost (e.g. view re-render)
             if (!view.containerEl.contains(this.containerEl)) {
                 view.containerEl.appendChild(this.containerEl);
             }
@@ -96,31 +94,24 @@ export default class SspaiTocPlugin extends Plugin {
 
         const newHeaders = this.getTocHeaders(view);
 
-        // Diff check
         if (this.areHeadersStructurallyEqual(this.lastHeadings, newHeaders)) {
-            // Optimization: Structure is same, just update line numbers
             this.updateTocPositions(newHeaders);
-            this.lastHeadings = newHeaders; // Update cache with new lines
+            this.lastHeadings = newHeaders;
             this.highlightActiveHeader(view);
         } else {
-            // Structure changed (added/removed/renamed), full render
             this.renderToc(view, newHeaders);
         }
 
         this.registerDomEvents(view);
         this.checkResponsiveVisibility(view);
 
-        // Setup MutationObserver to watch for class changes (Readable Line Width toggle)
         if (this.observer) {
             this.observer.disconnect();
         }
 
-        // Target: We need to watch the element that gets the 'is-readable-line-width' class.
-        // It's usually a child of contentEl (markdown-source-view etc)
         const target = view.contentEl.querySelector('.markdown-source-view, .markdown-preview-view');
         if (target) {
             this.observer = new MutationObserver((mutations) => {
-                // Check if class attribute changed
                 for (const mutation of mutations) {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                         this.checkResponsiveVisibility(view);
@@ -151,7 +142,6 @@ export default class SspaiTocPlugin extends Plugin {
         for (let i = 0; i < oldHeaders.length; i++) {
             const h1 = oldHeaders[i];
             const h2 = newHeaders[i];
-            // Compare text and level. Ignore line number for structure check.
             if (h1.level !== h2.level || h1.text !== h2.text) {
                 return false;
             }
@@ -161,10 +151,9 @@ export default class SspaiTocPlugin extends Plugin {
 
     updateTocPositions(headers: TocItem[]) {
         if (!this.containerEl) return;
-        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
         if (items.length !== headers.length) {
-            // Fallback, shouldn't happen if check passed
             return;
         }
 
@@ -182,17 +171,14 @@ export default class SspaiTocPlugin extends Plugin {
         let contentEl: HTMLElement | null = null;
 
         if (mode === 'source') {
-            // Source mode content container
-            contentEl = view.contentEl.querySelector('.cm-contentContainer') as HTMLElement;
+            contentEl = view.contentEl.querySelector('.cm-contentContainer');
             if (!contentEl) {
-                // Fallback
-                contentEl = view.contentEl.querySelector('.cm-sizer') as HTMLElement;
+                contentEl = view.contentEl.querySelector('.cm-sizer');
             }
         } else {
-            // Reading mode content container
-            contentEl = view.contentEl.querySelector('.markdown-preview-sizer') as HTMLElement;
+            contentEl = view.contentEl.querySelector('.markdown-preview-sizer');
             if (!contentEl) {
-                contentEl = view.contentEl.querySelector('.markdown-preview-section') as HTMLElement;
+                contentEl = view.contentEl.querySelector('.markdown-preview-section');
             }
         }
         if (contentEl) {
@@ -205,16 +191,12 @@ export default class SspaiTocPlugin extends Plugin {
             const minSpaceNeeded = 260; // 220 + 24 + 16 buffer
 
             // Check if Readable Line Width is enabled
-            // If NOT enabled (isReadable is false), content is usually wide, so we force compact mode
-            // OR if enabled but space is small, force compact mode.
             const isReadable = !!view.contentEl.querySelector('.is-readable-line-width');
 
             if (!isReadable || rightSpace < minSpaceNeeded) {
-                // Not enough space OR Full width mode -> Compact Mode
                 this.containerEl.addClass('compact');
                 this.containerEl.removeClass('hidden');
             } else {
-                // Enough space -> Normal Mode
                 this.containerEl.removeClass('compact');
                 this.containerEl.removeClass('hidden');
             }
@@ -225,14 +207,12 @@ export default class SspaiTocPlugin extends Plugin {
         const scrollEl = this.getScroller(view);
 
         if (scrollEl) {
-            // Use registerDomEvent to manage lifecycle automatically
             this.registerDomEvent(scrollEl, 'scroll', () => {
                 if (!this.blockScrollEvent) {
                     this.highlightActiveHeader(view);
                 }
             });
 
-            // Reset block flag on user interaction
             const resetBlock = () => {
                 this.blockScrollEvent = false;
             };
@@ -244,7 +224,6 @@ export default class SspaiTocPlugin extends Plugin {
 
         if (view.getMode() === 'source') {
             const handler = () => this.handleCursorActivity(view);
-            // Listen for cursor movement and interaction
             this.registerDomEvent(view.contentEl, 'keyup', handler);
             this.registerDomEvent(view.contentEl, 'mouseup', handler);
             this.registerDomEvent(view.contentEl, 'touchend', handler);
@@ -254,9 +233,7 @@ export default class SspaiTocPlugin extends Plugin {
 
     handleCursorActivity(view: MarkdownView) {
         if (view.getMode() === 'source') {
-            // @ts-ignore
             if (view.editor) {
-                // @ts-ignore
                 const cursor = view.editor.getCursor();
                 if (cursor) {
                     this.highlightActiveHeader(view, cursor.line);
@@ -268,48 +245,40 @@ export default class SspaiTocPlugin extends Plugin {
     renderToc(view: MarkdownView, headers?: TocItem[]) {
         if (!this.containerEl) return;
 
-        // If headers not provided, fetch them
         if (!headers) {
             headers = this.getTocHeaders(view);
         }
 
         this.containerEl.empty();
 
-        // Update lastHeadings if we are doing a full render
         this.lastHeadings = headers;
 
         headers.forEach((header, index) => {
-            const item = this.containerEl!.createDiv('sspai-toc-item');
+            const item = this.containerEl.createDiv('sspai-toc-item');
             item.addClass(`sspai-toc-level-${header.level}`);
 
-            // Wrap text for better ellipsis handling
             const textSpan = item.createSpan('sspai-toc-text');
             textSpan.innerText = this.stripMarkdown(header.text);
 
-            // Click to scroll
             item.onClickEvent(async (event) => {
                 event.preventDefault();
 
                 if (!view.file) return;
 
                 // Update lastActiveIndex immediately so that when the scroll event fires,
-                // the proximity check favors this item (handling duplicates correctly).
                 this.lastActiveIndex = index;
                 // Optional prompt for immediate feedback, though the scroll event will trigger updateActiveItem shortly
                 // this.updateActiveItem(Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[], index);
 
                 const mode = view.getMode();
-                // Dynamic lookup: fetch the latest line number from the DOM element's dataset
-                // because line numbers might have shifted since the render time if we only updated attributes
                 const line = parseInt(item.dataset.line || "0");
 
                 this.blockScrollEvent = true;
                 if (this.containerEl) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
                     this.updateActiveItem(items, index);
                 }
 
-                // Use eState for precise line-based navigation (solves duplicate headers)
                 await view.leaf.openFile(view.file, {
                     eState: {
                         line: line,
@@ -318,7 +287,6 @@ export default class SspaiTocPlugin extends Plugin {
                 });
             });
 
-            // Store line and level for highlighting
             item.dataset.line = header.line.toString();
             item.dataset.level = header.level.toString();
         });
@@ -328,22 +296,12 @@ export default class SspaiTocPlugin extends Plugin {
         const mode = view.getMode();
 
         if (mode === 'source') {
-            // Live Preview or Source Mode
-            // return view.editor?.scroller; // Check if this is reliable
-            // Better: look for .cm-scroller inside the view content
-            const scroller = view.contentEl.querySelector('.cm-scroller') as HTMLElement;
+            const scroller = view.contentEl.querySelector('.cm-scroller');
             if (scroller) return scroller;
-            // Fallback
-            // @ts-ignore
             return view.editor?.scroller;
         } else if (mode === 'preview') {
-            // Reading View
-            // The containerEl might be a wrapper. The actual scrollable is usually .markdown-preview-view
-            const scroller = view.contentEl.querySelector('.markdown-preview-view') as HTMLElement;
+            const scroller = view.contentEl.querySelector('.markdown-preview-view');
             if (scroller) return scroller;
-
-            // Fallback
-            // @ts-ignore
             return view.previewMode?.containerEl;
         }
         return null;
@@ -356,15 +314,10 @@ export default class SspaiTocPlugin extends Plugin {
         const scrollEl = this.getScroller(view);
         const mode = view.getMode();
 
-        // Editor Mode (Source / Live Preview)
         if (mode === 'source') {
-            // @ts-ignore
-            if (view.editor && currentLine === -1) { // Double check safely and only if no specific line provided
-                // @ts-ignore
+            if (view.editor && currentLine === -1) {
                 const editorScrollInfo = view.editor.getScrollInfo();
 
-                // Fix TS error: getScrollInfo return type might not have height in strict definition
-                // Use scrollEl logic if available (preferred), or fallback to a default
                 let h = 800;
                 if (scrollEl) {
                     h = scrollEl.clientHeight;
@@ -378,16 +331,15 @@ export default class SspaiTocPlugin extends Plugin {
                 const userOffset = h / 3000;
                 const targetHeight = editorScrollInfo.top + userOffset;
 
-                const editorAny = view.editor as any;
-                if (editorAny.cm) {
-                    const cm = editorAny.cm;
+                const editorWithCm = view.editor as unknown as { cm: CodeMirrorEditor };
+                if (editorWithCm.cm) {
+                    const cm = editorWithCm.cm;
                     try {
                         // Use screen coordinates (posAtCoords) for accurate "visual top" detection
                         // This bypasses issues with document padding, inline titles, etc.
                         if (scrollEl) {
                             const rect = scrollEl.getBoundingClientRect();
                             const topY = rect.top + (userOffset || 0);
-                            // X position: just slightly inside the content
                             const padX = rect.left + 20;
 
                             const pos = cm.posAtCoords({ x: padX, y: topY });
@@ -410,19 +362,19 @@ export default class SspaiTocPlugin extends Plugin {
                         //     });
                         // }
                     } catch (e) {
+                        console.debug("TOC active line detection failed", e);
                     }
                 }
             }
         } else if (mode === 'preview') {
-            // Reading Mode (Preview)
             if (scrollEl) {
                 // Handle Top of Document: force highlight first item if scrolled to top
                 if (scrollEl.scrollTop < 50) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
                     if (items.length > 0) {
                         this.lastActiveIndex = 0;
                         this.updateActiveItem(items, 0);
-                        return; // Skip complex DOM calculation
+                        return;
                     }
                 }
 
@@ -445,10 +397,10 @@ export default class SspaiTocPlugin extends Plugin {
                     const rect = domHeaders[i].getBoundingClientRect();
 
                     // Only log if close to boundary to avoid spam
-                    if (Math.abs(rect.top - targetTop) < 150) {
-                        const headerText = (domHeaders[i] as HTMLElement).innerText;
-                        // console.log(`[TOC Debug] Near Boundary - Header: "${headerText}", rect.top: ${rect.top}, targetTop: ${targetTop}, isRead: ${rect.top <= targetTop}`);
-                    }
+                    // if (Math.abs(rect.top - targetTop) < 150) {
+                    //     const headerText = (domHeaders[i] as HTMLElement).innerText;
+                    //     // console.log(`[TOC Debug] Near Boundary - Header: "${headerText}", rect.top: ${rect.top}, targetTop: ${targetTop}, isRead: ${rect.top <= targetTop}`);
+                    // }
 
                     if (rect.top <= targetTop) {
                         // 当前标题已读完，尝试选中下一个
@@ -474,7 +426,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                     if (headerText) {
                         // Find this text in our TOC items
-                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
                         // Get the level from DOM tag
                         const tagName = activeDomHeader.tagName.toLowerCase(); // h1..h6
@@ -487,7 +439,7 @@ export default class SspaiTocPlugin extends Plugin {
                         for (let i = 0; i < items.length; i++) {
                             const item = items[i];
                             const itemLevel = parseInt(item.dataset.level || "0");
-                            const itemTextSpan = item.querySelector('.sspai-toc-text') as HTMLElement;
+                            const itemTextSpan = item.querySelector('.sspai-toc-text');
                             const itemText = itemTextSpan ? itemTextSpan.innerText : "";
 
                             // Check if text and level match
@@ -518,7 +470,6 @@ export default class SspaiTocPlugin extends Plugin {
                             matchedIndex = bestMatch;
                         }
 
-                        // If we found a match, update it
                         if (matchedIndex >= 0) {
                             this.lastActiveIndex = matchedIndex;
                             this.updateActiveItem(items, matchedIndex);
@@ -531,7 +482,7 @@ export default class SspaiTocPlugin extends Plugin {
 
         // Editor Mode falls through to here
         if (mode === 'source') {
-            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
             let activeIndex = -1;
 
             // let lastMatchedIndex = -1;
@@ -617,8 +568,6 @@ export default class SspaiTocPlugin extends Plugin {
         let clean = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 
         // 2. Bold/Italic: **text**, *text*, __text__, _text_
-        // Note: This is a simple regex and might not handle nested or complex cases perfectly, 
-        // but sufficient for TOC display.
         clean = clean.replace(/(\*\*|__)(.*?)\1/g, '$2'); // Bold
         clean = clean.replace(/(\*|_)(.*?)\1/g, '$2');   // Italic
 
@@ -626,14 +575,7 @@ export default class SspaiTocPlugin extends Plugin {
         clean = clean.replace(/`([^`]+)`/g, '$1');
 
         // 4. Images: ![alt](url) -> alt (or remove if empty)
-        // actually image syntax is ![alt](url), closely related to links but starting with !
-        // The link regex above might leave the '!' if not handled.
-
-        // Let's handle images specifically before links if we want to remove them or keep alt
-        // Re-run for images specifically: ![alt](url) -> alt
         clean = clean.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
-
-        // Clean up remaining brackets if any (optional)
 
         return clean;
     }

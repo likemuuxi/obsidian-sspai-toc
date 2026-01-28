@@ -28,6 +28,7 @@ export default class SspaiTocPlugin extends Plugin {
     isUserInteracting: boolean = false; // Flag to track if user is interacting with editor
     private currentObservedView: MarkdownView | null = null;
     private eventRemovers: (() => void)[] = [];
+    private _resetInteractingTimer: ReturnType<typeof setTimeout> | null = null;
 
     onload() {
         this.debouncedUpdate = debounce(this.updateToc.bind(this), 100, true);
@@ -183,7 +184,7 @@ export default class SspaiTocPlugin extends Plugin {
 
     updateTocPositions(headers: TocItem[]) {
         if (!this.containerEl) return;
-        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
         if (items.length !== headers.length) {
             return;
@@ -273,8 +274,8 @@ export default class SspaiTocPlugin extends Plugin {
                 this.handleCursorActivity(view);
                 // Debounce resetting the interacting flag
                 // This prevents scroll events immediately after keyup from taking over
-                if ((this as any)._resetInteractingTimer) clearTimeout((this as any)._resetInteractingTimer);
-                (this as any)._resetInteractingTimer = setTimeout(() => {
+                if (this._resetInteractingTimer) clearTimeout(this._resetInteractingTimer);
+                this._resetInteractingTimer = setTimeout(() => {
                     this.isUserInteracting = false;
                 }, 150);
             };
@@ -331,14 +332,14 @@ export default class SspaiTocPlugin extends Plugin {
                 // Update lastActiveIndex immediately so that when the scroll event fires,
                 this.lastActiveIndex = index;
                 // Optional prompt for immediate feedback, though the scroll event will trigger updateActiveItem shortly
-                // this.updateActiveItem(Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[], index);
+                // this.updateActiveItem(Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')), index);
 
                 const mode = view.getMode();
                 const line = parseInt(item.getAttribute('data-line') || "0");
 
                 this.blockScrollEvent = true;
                 if (this.containerEl) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
                     this.updateActiveItem(items, index);
                 }
 
@@ -361,11 +362,11 @@ export default class SspaiTocPlugin extends Plugin {
         if (mode === 'source') {
             const scroller = view.contentEl.querySelector('.cm-scroller');
             if (scroller) return scroller as HTMLElement;
-            return (view.editor as any)?.scroller || null;
+            return (view.editor as unknown as { scroller?: HTMLElement })?.scroller || null;
         } else if (mode === 'preview') {
             const scroller = view.contentEl.querySelector('.markdown-preview-view');
             if (scroller) return scroller as HTMLElement;
-            return (view.previewMode as any)?.containerEl || null;
+            return (view.previewMode as unknown as { containerEl?: HTMLElement })?.containerEl || null;
         }
         return null;
     }
@@ -433,7 +434,7 @@ export default class SspaiTocPlugin extends Plugin {
             if (scrollEl) {
                 // Handle Top of Document: force highlight first item if scrolled to top
                 if (scrollEl.scrollTop < 50) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
                     if (items.length > 0) {
                         this.lastActiveIndex = 0;
                         this.updateActiveItem(items, 0);
@@ -489,7 +490,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                     if (headerText) {
                         // Find this text in our TOC items
-                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
                         // Get the level from DOM tag
                         const tagName = activeDomHeader.tagName.toLowerCase(); // h1..h6
@@ -545,7 +546,7 @@ export default class SspaiTocPlugin extends Plugin {
 
         // Editor Mode falls through to here
         if (mode === 'source') {
-            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
             let activeIndex = -1;
 
             // let lastMatchedIndex = -1;

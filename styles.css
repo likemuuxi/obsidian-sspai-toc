@@ -514,13 +514,18 @@ settings:
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-
-
+    right: 10px;
     border: none;
     border-radius: 99px;
     /* Pill shape */
     /* Variable width base (defaults to level specific below) */
     background-color: var(--text-faint);
+}
+
+/* Adjust Indicators in Expanded Mode: Add margin from right edge */
+.sspai-toc-container.compact:hover .sspai-toc-item::before {
+    right: 10px;
+    /* Add spacing from container edge */
 }
 
 /* Variable Lengths based on Header Level in Compact Mode */
@@ -593,6 +598,7 @@ settings:
     opacity: 0;
     visibility: hidden;
     display: none;
+    max-width: 200px;
     font-size: var(--toc-item-text-size);
 }
 
@@ -659,12 +665,6 @@ settings:
     /* Force height to match normal mode (Text + Padding) so spacing is consistent */
     box-sizing: border-box;
     /* Increased separation for bars on right */
-}
-
-/* Adjust Indicators in Expanded Mode: Add margin from right edge */
-.sspai-toc-container.compact:hover .sspai-toc-item::before {
-    right: 0px;
-    /* Add spacing from container edge */
 }
 
 .sspai-toc-container.compact:hover .sspai-toc-text {

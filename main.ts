@@ -25,6 +25,9 @@ export default class SspaiTocPlugin extends Plugin {
     debouncedUpdate: Debouncer<[], void>;
     observer: MutationObserver | null = null;
     blockScrollEvent: boolean = false;
+    isUserInteracting: boolean = false; // Flag to track if user is interacting with editor
+    private currentObservedView: MarkdownView | null = null;
+    private eventRemovers: (() => void)[] = [];
 
     onload() {
         this.debouncedUpdate = debounce(this.updateToc.bind(this), 100, true);
@@ -63,6 +66,12 @@ export default class SspaiTocPlugin extends Plugin {
             this.observer.disconnect();
             this.observer = null;
         }
+        this.clearEventRemovers();
+    }
+
+    clearEventRemovers() {
+        this.eventRemovers.forEach(remove => remove());
+        this.eventRemovers = [];
     }
 
     removeToc() {
@@ -94,31 +103,54 @@ export default class SspaiTocPlugin extends Plugin {
 
         const newHeaders = this.getTocHeaders(view);
 
-        if (this.areHeadersStructurallyEqual(this.lastHeadings, newHeaders)) {
+        if (this.areHeadersStructurallyEqual(this.lastHeadings, newHeaders)) { // 检测标题变化 避免编辑文章的时候频繁渲染
             this.updateTocPositions(newHeaders);
             this.lastHeadings = newHeaders;
-            this.highlightActiveHeader(view);
+            
+            // Only highlight if NOT interacting or if we have a specific line preference?
+            // Actually, we should probably prefer cursor if available in Source Mode.
+            if (view.getMode() === 'source' && view.editor) {
+                const cursor = view.editor.getCursor();
+                if (cursor) {
+                    this.highlightActiveHeader(view, cursor.line);
+                } else {
+                    this.highlightActiveHeader(view);
+                }
+            } else {
+                this.highlightActiveHeader(view);
+            }
         } else {
             this.renderToc(view, newHeaders);
+            // After render, also sync with cursor if possible
+            if (view.getMode() === 'source' && view.editor) {
+                const cursor = view.editor.getCursor();
+                if (cursor) {
+                    this.highlightActiveHeader(view, cursor.line);
+                }
+            }
         }
 
         this.registerDomEvents(view);
         this.checkResponsiveVisibility(view);
 
-        if (this.observer) {
-            this.observer.disconnect();
-        }
+        if (this.currentObservedView !== view) {
+            if (this.observer) {
+                this.observer.disconnect();
+                this.observer = null;
+            }
 
-        const target = view.contentEl.querySelector('.markdown-source-view, .markdown-preview-view');
-        if (target) {
-            this.observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        this.checkResponsiveVisibility(view);
+            const target = view.contentEl.querySelector('.markdown-source-view, .markdown-preview-view'); // 监测缩减栏宽是否开启
+            if (target) {
+                this.observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            this.checkResponsiveVisibility(view);
+                        }
                     }
-                }
-            });
-            this.observer.observe(target, { attributes: true, attributeFilter: ['class'] });
+                });
+                this.observer.observe(target, { attributes: true, attributeFilter: ['class'] });
+            }
+            this.currentObservedView = view;
         }
     }
 
@@ -151,7 +183,7 @@ export default class SspaiTocPlugin extends Plugin {
 
     updateTocPositions(headers: TocItem[]) {
         if (!this.containerEl) return;
-        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
 
         if (items.length !== headers.length) {
             return;
@@ -204,30 +236,61 @@ export default class SspaiTocPlugin extends Plugin {
     }
 
     registerDomEvents(view: MarkdownView) {
+        // Clear previous listeners first to avoid duplication
+        this.clearEventRemovers();
+
         const scrollEl = this.getScroller(view);
 
         if (scrollEl) {
-            this.registerDomEvent(scrollEl, 'scroll', () => {
-                if (!this.blockScrollEvent) {
+            const scrollHandler = () => {
+                if (!this.blockScrollEvent && !this.isUserInteracting) {
                     this.highlightActiveHeader(view);
                 }
-            });
+            };
+            scrollEl.addEventListener('scroll', scrollHandler);
+            this.eventRemovers.push(() => scrollEl.removeEventListener('scroll', scrollHandler));
 
             const resetBlock = () => {
                 this.blockScrollEvent = false;
             };
-            this.registerDomEvent(scrollEl, 'mousedown', resetBlock);
-            this.registerDomEvent(scrollEl, 'wheel', resetBlock);
-            this.registerDomEvent(scrollEl, 'touchstart', resetBlock);
-            this.registerDomEvent(scrollEl, 'keydown', resetBlock);
+            
+            scrollEl.addEventListener('mousedown', resetBlock);
+            this.eventRemovers.push(() => scrollEl.removeEventListener('mousedown', resetBlock));
+            
+            scrollEl.addEventListener('wheel', resetBlock);
+            this.eventRemovers.push(() => scrollEl.removeEventListener('wheel', resetBlock));
+            
+            scrollEl.addEventListener('touchstart', resetBlock);
+            this.eventRemovers.push(() => scrollEl.removeEventListener('touchstart', resetBlock));
+            
+            scrollEl.addEventListener('keydown', resetBlock);
+            this.eventRemovers.push(() => scrollEl.removeEventListener('keydown', resetBlock));
         }
 
         if (view.getMode() === 'source') {
-            const handler = () => this.handleCursorActivity(view);
-            this.registerDomEvent(view.contentEl, 'keyup', handler);
-            this.registerDomEvent(view.contentEl, 'mouseup', handler);
-            this.registerDomEvent(view.contentEl, 'touchend', handler);
-            this.registerDomEvent(view.contentEl, 'click', handler);
+            const handler = () => {
+                this.isUserInteracting = true;
+                this.handleCursorActivity(view);
+                // Debounce resetting the interacting flag
+                // This prevents scroll events immediately after keyup from taking over
+                if ((this as any)._resetInteractingTimer) clearTimeout((this as any)._resetInteractingTimer);
+                (this as any)._resetInteractingTimer = setTimeout(() => {
+                    this.isUserInteracting = false;
+                }, 150);
+            };
+            const contentEl = view.contentEl as HTMLElement;
+            
+            contentEl.addEventListener('keyup', handler);
+            this.eventRemovers.push(() => contentEl.removeEventListener('keyup', handler));
+            
+            contentEl.addEventListener('mouseup', handler);
+            this.eventRemovers.push(() => contentEl.removeEventListener('mouseup', handler));
+            
+            contentEl.addEventListener('touchend', handler);
+            this.eventRemovers.push(() => contentEl.removeEventListener('touchend', handler));
+            
+            contentEl.addEventListener('click', handler);
+            this.eventRemovers.push(() => contentEl.removeEventListener('click', handler));
         }
     }
 
@@ -271,11 +334,11 @@ export default class SspaiTocPlugin extends Plugin {
                 // this.updateActiveItem(Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[], index);
 
                 const mode = view.getMode();
-                const line = parseInt(item.dataset.line || "0");
+                const line = parseInt(item.getAttribute('data-line') || "0");
 
                 this.blockScrollEvent = true;
                 if (this.containerEl) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
                     this.updateActiveItem(items, index);
                 }
 
@@ -297,12 +360,12 @@ export default class SspaiTocPlugin extends Plugin {
 
         if (mode === 'source') {
             const scroller = view.contentEl.querySelector('.cm-scroller');
-            if (scroller) return scroller;
-            return view.editor?.scroller;
+            if (scroller) return scroller as HTMLElement;
+            return (view.editor as any)?.scroller || null;
         } else if (mode === 'preview') {
             const scroller = view.contentEl.querySelector('.markdown-preview-view');
-            if (scroller) return scroller;
-            return view.previewMode?.containerEl;
+            if (scroller) return scroller as HTMLElement;
+            return (view.previewMode as any)?.containerEl || null;
         }
         return null;
     }
@@ -370,7 +433,7 @@ export default class SspaiTocPlugin extends Plugin {
             if (scrollEl) {
                 // Handle Top of Document: force highlight first item if scrolled to top
                 if (scrollEl.scrollTop < 50) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
                     if (items.length > 0) {
                         this.lastActiveIndex = 0;
                         this.updateActiveItem(items, 0);
@@ -426,7 +489,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                     if (headerText) {
                         // Find this text in our TOC items
-                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
 
                         // Get the level from DOM tag
                         const tagName = activeDomHeader.tagName.toLowerCase(); // h1..h6
@@ -440,7 +503,7 @@ export default class SspaiTocPlugin extends Plugin {
                             const item = items[i];
                             const itemLevel = parseInt(item.dataset.level || "0");
                             const itemTextSpan = item.querySelector('.sspai-toc-text');
-                            const itemText = itemTextSpan ? itemTextSpan.innerText : "";
+                            const itemText = itemTextSpan ? (itemTextSpan as HTMLElement).innerText : "";
 
                             // Check if text and level match
                             if (itemLevel === level && itemText === headerText) {
@@ -482,7 +545,7 @@ export default class SspaiTocPlugin extends Plugin {
 
         // Editor Mode falls through to here
         if (mode === 'source') {
-            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
             let activeIndex = -1;
 
             // let lastMatchedIndex = -1;
@@ -532,34 +595,49 @@ export default class SspaiTocPlugin extends Plugin {
     }
 
     updateActiveItem(items: HTMLElement[], activeIndex: number) {
-        // Clear all visibility classes
-        items.forEach(i => {
-            i.removeClass('active');
-            i.removeClass('parent-visible');
-        });
+        // Calculate the new state first
+        const newActiveIndex = (activeIndex >= 0 && activeIndex < items.length) ? activeIndex : -1;
+        const newParentIndices = new Set<number>();
 
-        if (activeIndex >= 0 && activeIndex < items.length) {
-            const activeItem = items[activeIndex];
-            activeItem.addClass('active');
-
-            // Get the level of active item
+        if (newActiveIndex !== -1) {
+            const activeItem = items[newActiveIndex];
             const activeLevel = parseInt(activeItem.dataset.level || "1");
 
             // Find parent headings (headings with smaller level that appear before active)
             const parentLevelsFound = new Set<number>();
-            for (let i = activeIndex - 1; i >= 0; i--) {
+            for (let i = newActiveIndex - 1; i >= 0; i--) {
                 const itemLevel = parseInt(items[i].dataset.level || "1");
-                // A parent is a heading with smaller level number
                 if (itemLevel < activeLevel && !parentLevelsFound.has(itemLevel)) {
-                    items[i].addClass('parent-visible');
+                    newParentIndices.add(i);
                     parentLevelsFound.add(itemLevel);
                     if (itemLevel === 1) break;
                 }
             }
+        }
 
-            // Ensure active item is visible in TOC
-            // Use block: 'center' to keep it in middle of TOC view
-            activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        // Apply changes efficiently by comparing with current state
+        items.forEach((item, index) => {
+            const shouldBeActive = index === newActiveIndex;
+            const shouldBeParent = newParentIndices.has(index);
+
+            // Update Active Class
+            if (shouldBeActive) {
+                if (!item.classList.contains('active')) item.addClass('active');
+            } else {
+                if (item.classList.contains('active')) item.removeClass('active');
+            }
+
+            // Update Parent Visible Class
+            if (shouldBeParent) {
+                if (!item.classList.contains('parent-visible')) item.addClass('parent-visible');
+            } else {
+                if (item.classList.contains('parent-visible')) item.removeClass('parent-visible');
+            }
+        });
+
+        // Ensure active item is visible in TOC
+        if (newActiveIndex !== -1) {
+            items[newActiveIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
     }
 

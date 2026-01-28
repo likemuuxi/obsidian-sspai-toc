@@ -466,8 +466,8 @@ export default class SspaiTocPlugin extends Plugin {
                     // }
 
                     if (rect.top <= targetTop) {
-                        // 当前标题已读完，尝试选中下一个
-                        activeDomHeader = domHeaders[i + 1] || domHeaders[i];
+                        // Highlight the header we have just passed (current section)
+                        activeDomHeader = domHeaders[i];
                     } else {
                         break;
                     }
@@ -555,7 +555,9 @@ export default class SspaiTocPlugin extends Plugin {
 
                 if (itemLine <= currentLine) {
                     // lastMatchedIndex = i;
-                    activeIndex = (specificLine !== undefined) ? i : i + 1;
+                    // Always highlight the current header (the one we are 'in')
+                    // This matches the cursor behavior and prevents jumping between 'current' and 'next'
+                    activeIndex = i;
                 } else {
                     break;
                 }

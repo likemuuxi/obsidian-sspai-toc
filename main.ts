@@ -279,8 +279,9 @@ export default class SspaiTocPlugin extends Plugin {
                     this.isUserInteracting = false;
                 }, 150);
             };
-            const contentEl = view.contentEl as HTMLElement;
             
+            const contentEl = view.contentEl;
+
             contentEl.addEventListener('keyup', handler);
             this.eventRemovers.push(() => contentEl.removeEventListener('keyup', handler));
             
@@ -468,7 +469,7 @@ export default class SspaiTocPlugin extends Plugin {
 
                     if (rect.top <= targetTop) {
                         // Highlight the header we have just passed (current section)
-                        activeDomHeader = domHeaders[i];
+                        activeDomHeader = domHeaders[i + 1] || domHeaders[i];
                     } else {
                         break;
                     }
@@ -558,7 +559,7 @@ export default class SspaiTocPlugin extends Plugin {
                     // lastMatchedIndex = i;
                     // Always highlight the current header (the one we are 'in')
                     // This matches the cursor behavior and prevents jumping between 'current' and 'next'
-                    activeIndex = i;
+                    activeIndex = (specificLine !== undefined) ? i : i + 1;
                 } else {
                     break;
                 }

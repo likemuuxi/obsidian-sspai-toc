@@ -523,7 +523,8 @@ settings:
 }
 
 /* Adjust Indicators in Expanded Mode: Add margin from right edge */
-.sspai-toc-container.compact:hover .sspai-toc-item::before {
+.sspai-toc-container.compact:hover .sspai-toc-item::before,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item::before {
     right: 10px;
     /* Add spacing from container edge */
 }
@@ -640,11 +641,13 @@ settings:
 
 /* 3. STATE: EXPANDED (Hovered) */
 /* Disable transition during expansion for instant effect */
-.sspai-toc-container.compact:hover .sspai-toc-item {
+.sspai-toc-container.compact:hover .sspai-toc-item,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item {
     transition: none !important;
 }
 
-.sspai-toc-container.compact:hover {
+.sspai-toc-container.compact:hover,
+.sspai-toc-container.compact.mobile-expanded {
     width: var(--compact-toc-container-width);
     max-height: var(--toc-container-height);
     background-color: var(--background-primary);
@@ -655,7 +658,8 @@ settings:
 }
 
 /* Reset layout for expanded items to standard Left-Aligned Outline */
-.sspai-toc-container.compact:hover .sspai-toc-item {
+.sspai-toc-container.compact:hover .sspai-toc-item,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item {
     justify-content: flex-start;
     /* Align start (left) */
     text-align: left;
@@ -667,7 +671,8 @@ settings:
     /* Increased separation for bars on right */
 }
 
-.sspai-toc-container.compact:hover .sspai-toc-text {
+.sspai-toc-container.compact:hover .sspai-toc-text,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-text {
     opacity: 1;
     visibility: visible;
     display: block;
@@ -679,26 +684,32 @@ settings:
 }
 
 /* 4. EXPANDED INDENTATION (Obsidian Outline Style) */
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-1 {
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-1,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-1 {
     padding-left: 12px;
 }
 
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-2 {
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-2,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-2 {
     padding-left: 24px;
 }
 
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-3 {
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-3,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-3 {
     padding-left: 36px;
 }
 
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-4 {
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-4,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-4 {
     padding-left: 48px;
 }
 
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-5 {
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-5,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-5 {
     padding-left: 60px;
 }
 
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-6 {
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-6,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-6 {
     padding-left: 72px;
 }

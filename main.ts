@@ -1,4 +1,4 @@
-import { Plugin, MarkdownView, Debouncer, debounce } from 'obsidian';
+import { Plugin, MarkdownView, Debouncer, debounce, Platform } from 'obsidian';
 
 interface TocItem {
     level: number;
@@ -253,15 +253,18 @@ export default class SspaiTocPlugin extends Plugin {
 
             const resetBlock = () => {
                 this.blockScrollEvent = false;
+                if (Platform.isMobile && this.containerEl) {
+                    this.containerEl.removeClass('mobile-expanded');
+                }
             };
             
             scrollEl.addEventListener('mousedown', resetBlock);
             this.eventRemovers.push(() => scrollEl.removeEventListener('mousedown', resetBlock));
             
-            scrollEl.addEventListener('wheel', resetBlock);
+            scrollEl.addEventListener('wheel', resetBlock, { passive: true });
             this.eventRemovers.push(() => scrollEl.removeEventListener('wheel', resetBlock));
             
-            scrollEl.addEventListener('touchstart', resetBlock);
+            scrollEl.addEventListener('touchstart', resetBlock, { passive: true });
             this.eventRemovers.push(() => scrollEl.removeEventListener('touchstart', resetBlock));
             
             scrollEl.addEventListener('keydown', resetBlock);
@@ -271,6 +274,9 @@ export default class SspaiTocPlugin extends Plugin {
         if (view.getMode() === 'source') {
             const handler = () => {
                 this.isUserInteracting = true;
+                if (Platform.isMobile && this.containerEl) {
+                    this.containerEl.removeClass('mobile-expanded');
+                }
                 this.handleCursorActivity(view);
                 // Debounce resetting the interacting flag
                 // This prevents scroll events immediately after keyup from taking over
@@ -329,6 +335,14 @@ export default class SspaiTocPlugin extends Plugin {
                 event.preventDefault();
 
                 if (!view.file) return;
+
+                // Mobile specific behavior: First touch expands, second touch jumps
+                if (Platform.isMobile && this.containerEl && this.containerEl.classList.contains('compact')) {
+                    if (!this.containerEl.classList.contains('mobile-expanded')) {
+                        this.containerEl.addClass('mobile-expanded');
+                        return;
+                    }
+                }
 
                 // Update lastActiveIndex immediately so that when the scroll event fires,
                 this.lastActiveIndex = index;

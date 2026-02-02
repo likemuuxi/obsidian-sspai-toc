@@ -3,7 +3,19 @@
 name: Sspai Style TOC
 id: sspai-style-toc
 settings:
-
+	-
+		id: compact-mode-show-tooltip
+		title: Compact mode show tooltip
+		description: Show tooltip when hover on TOC item in compact mode.
+		type: class-toggle
+		default: true
+	-
+		id: toc-item-text-size
+		title: TOC item text size
+		description: The size of TOC item text.
+		type: variable-number
+		format: px
+		default: 13
 	-
 		id: toc-item-text-size
 		title: TOC item text size
@@ -604,8 +616,8 @@ settings:
 }
 
 /* SHOW ACTIVE & PARENT ITEM TOOLTIPS */
-.sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text,
-.sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
+.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text,
+.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
     display: block;
     position: absolute;
     right: 40px;
@@ -635,7 +647,7 @@ settings:
    Let's check normal mode .parent-visible style.
    Line 132: color: var(--text-muted);
 */
-.sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
+.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
     color: var(--text-muted);
 }
 

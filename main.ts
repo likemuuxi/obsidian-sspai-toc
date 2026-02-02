@@ -88,9 +88,7 @@ export default class SspaiTocPlugin extends Plugin {
     updateToc() {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
-        if (!view) {
-            return;
-        }
+        if (!view) return;
 
         if (!this.containerEl) {
             this.containerEl = document.createElement('div');
@@ -107,9 +105,7 @@ export default class SspaiTocPlugin extends Plugin {
         if (this.areHeadersStructurallyEqual(this.lastHeadings, newHeaders)) { // 检测标题变化 避免编辑文章的时候频繁渲染
             this.updateTocPositions(newHeaders);
             this.lastHeadings = newHeaders;
-            
-            // Only highlight if NOT interacting or if we have a specific line preference?
-            // Actually, we should probably prefer cursor if available in Source Mode.
+
             if (view.getMode() === 'source' && view.editor) {
                 const cursor = view.editor.getCursor();
                 if (cursor) {
@@ -182,7 +178,7 @@ export default class SspaiTocPlugin extends Plugin {
         return true;
     }
 
-    updateTocPositions(headers: TocItem[]) {
+    updateTocPositions(headers: TocItem[]) { // 更新目录项位置信息 data-line
         if (!this.containerEl) return;
         const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
@@ -197,7 +193,7 @@ export default class SspaiTocPlugin extends Plugin {
         });
     }
 
-    checkResponsiveVisibility(view: MarkdownView) {
+    checkResponsiveVisibility(view: MarkdownView) { // 检查并应用目录模式
         if (!this.containerEl) return;
 
         const mode = view.getMode();
@@ -346,18 +342,15 @@ export default class SspaiTocPlugin extends Plugin {
 
                 // Update lastActiveIndex immediately so that when the scroll event fires,
                 this.lastActiveIndex = index;
-                // Optional prompt for immediate feedback, though the scroll event will trigger updateActiveItem shortly
-                // this.updateActiveItem(Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')), index);
-
-                const mode = view.getMode();
-                const line = parseInt(item.getAttribute('data-line') || "0");
-
                 this.blockScrollEvent = true;
+
                 if (this.containerEl) {
                     const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
                     this.updateActiveItem(items, index);
                 }
 
+                const mode = view.getMode();
+                const line = parseInt(item.getAttribute('data-line') || "0");
                 await view.leaf.openFile(view.file, {
                     eState: {
                         line: line,
@@ -389,226 +382,191 @@ export default class SspaiTocPlugin extends Plugin {
     highlightActiveHeader(view: MarkdownView, specificLine?: number) {
         if (!this.containerEl) return;
 
-        let currentLine = specificLine ?? -1;
         const scrollEl = this.getScroller(view);
         const mode = view.getMode();
 
         if (mode === 'source') {
-            if (view.editor && currentLine === -1) {
-                const editorScrollInfo = view.editor.getScrollInfo();
-
-                let h = 800;
-                if (scrollEl) {
-                    h = scrollEl.clientHeight;
-                } else {
-                    // @ts-ignore
-                    if (editorScrollInfo.height) h = editorScrollInfo.height;
-                }
-
-                // Adjust offset for source mode to match preview behavior
-                // Smaller offset means we look closer to the top of screen
-                const userOffset = h / 3000;
-                const targetHeight = editorScrollInfo.top + userOffset;
-
-                const editorWithCm = view.editor as unknown as { cm: CodeMirrorEditor };
-                if (editorWithCm.cm) {
-                    const cm = editorWithCm.cm;
-                    try {
-                        // Use screen coordinates (posAtCoords) for accurate "visual top" detection
-                        // This bypasses issues with document padding, inline titles, etc.
-                        if (scrollEl) {
-                            const rect = scrollEl.getBoundingClientRect();
-                            const topY = rect.top + (userOffset || 0);
-                            const padX = rect.left + 20;
-
-                            const pos = cm.posAtCoords({ x: padX, y: topY });
-                            if (pos !== null) {
-                                currentLine = cm.state.doc.lineAt(pos).number;
-                            }
-                        } else {
-                            // Fallback to old lineBlockAtHeight if scrollEl missing (unlikely)
-                            const block = cm.lineBlockAtHeight(targetHeight);
-                            if (block) {
-                                currentLine = cm.state.doc.lineAt(block.from).number;
-                            }
-                        }
-
-                        // if (currentLine !== -1) {
-                        //     const lineContent = cm.state.doc.line(currentLine).text;
-                        //     console.log({
-                        //         "currentLine": currentLine,
-                        //         "lineContent": lineContent
-                        //     });
-                        // }
-                    } catch (e) {
-                        console.debug("TOC active line detection failed", e);
-                    }
-                }
-            }
+            this.highlightInSourceMode(view, scrollEl, specificLine ?? -1);
         } else if (mode === 'preview') {
-            if (scrollEl) {
-                // Handle Top of Document: force highlight first item if scrolled to top
-                if (scrollEl.scrollTop < 50) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
-                    if (items.length > 0) {
-                        this.lastActiveIndex = 0;
-                        this.updateActiveItem(items, 0);
-                        return;
-                    }
-                }
+            this.highlightInPreviewMode(view, scrollEl);
+        }
+    }
 
-                const userOffset = scrollEl.clientHeight / 2000;
-                const containerRect = scrollEl.getBoundingClientRect();
-                const targetTop = containerRect.top + userOffset - 20;
+    highlightInSourceMode(view: MarkdownView, scrollEl: HTMLElement | null, currentLine: number) {
+        if (!this.containerEl) return;
 
-                // Strategy: Text-Based Header Matching (Best for Virtualization + Missing Line Numbers)
-                // We find the header in DOM that is effectively "active" (above reading line)
-                // And we match it by TEXT to the TOC list.
+        if (view.editor && currentLine === -1) {
+            currentLine = this.detectCurrentLineFromScroll(view, scrollEl);
+        }
 
-                const domHeaders = Array.from(view.contentEl.querySelectorAll('h1, h2, h3, h4, h5, h6'))
-                    .filter(h => !h.closest('.markdown-embed') && !h.classList.contains('inline-title'));
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+        let activeIndex = -1;
 
-                let activeDomHeader: Element | null = null;
+        for (let i = 0; i < items.length; i++) {
+            const itemLine = parseInt((items[i] as HTMLElement).dataset.line || "0");
 
-                // Find the header closest to the target line (but above it)
-                // console.log(`[TOC Debug] targetTop: ${targetTop}`);
-                for (let i = 0; i < domHeaders.length; i++) {
-                    const rect = domHeaders[i].getBoundingClientRect();
-
-                    // Only log if close to boundary to avoid spam
-                    // if (Math.abs(rect.top - targetTop) < 150) {
-                    //     const headerText = (domHeaders[i] as HTMLElement).innerText;
-                    //     // console.log(`[TOC Debug] Near Boundary - Header: "${headerText}", rect.top: ${rect.top}, targetTop: ${targetTop}, isRead: ${rect.top <= targetTop}`);
-                    // }
-
-                    if (rect.top <= targetTop) {
-                        // Highlight the header we have just passed (current section)
-                        activeDomHeader = domHeaders[i + 1] || domHeaders[i];
-                    } else {
-                        break;
-                    }
-                }
-
-                // if (activeDomHeader) {
-                //     console.log(`[TOC Debug] Final Active: "${(activeDomHeader as HTMLElement).innerText}"`);
-                // }
-
-                if (activeDomHeader) {
-                    // Start with innerText which matches the rendered TOC items (stripped of Markdown)
-                    let headerText = (activeDomHeader as HTMLElement).innerText;
-
-                    // Fallback to data-heading if innerText is empty? 
-                    // Usually innerText is better for matching visual content.
-                    if (!headerText) {
-                        headerText = activeDomHeader.getAttribute('data-heading') || "";
-                    }
-
-                    if (headerText) {
-                        // Find this text in our TOC items
-                        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
-
-                        // Get the level from DOM tag
-                        const tagName = activeDomHeader.tagName.toLowerCase(); // h1..h6
-                        const level = parseInt(tagName.replace('h', ''));
-
-                        // Solution for duplicates: Use proximity-based matching
-                        // Collect all matching indices, then choose the one closest to last active position
-                        const matchingIndices: number[] = [];
-
-                        for (let i = 0; i < items.length; i++) {
-                            const item = items[i];
-                            const itemLevel = parseInt(item.dataset.level || "0");
-                            const itemTextSpan = item.querySelector('.sspai-toc-text');
-                            const itemText = itemTextSpan ? (itemTextSpan as HTMLElement).innerText : "";
-
-                            // Check if text and level match
-                            if (itemLevel === level && itemText === headerText) {
-                                matchingIndices.push(i);
-                            }
-                        }
-
-                        let matchedIndex = -1;
-
-                        if (matchingIndices.length === 1) {
-                            // Only one match, use it
-                            matchedIndex = matchingIndices[0];
-                        } else if (matchingIndices.length > 1) {
-                            // Multiple matches: choose the one closest to last active index
-                            // This prevents large jumps and provides smooth scrolling experience
-                            let minDistance = Infinity;
-                            let bestMatch = matchingIndices[0];
-
-                            for (const idx of matchingIndices) {
-                                const distance = Math.abs(idx - this.lastActiveIndex);
-                                if (distance < minDistance) {
-                                    minDistance = distance;
-                                    bestMatch = idx;
-                                }
-                            }
-
-                            matchedIndex = bestMatch;
-                        }
-
-                        if (matchedIndex >= 0) {
-                            this.lastActiveIndex = matchedIndex;
-                            this.updateActiveItem(items, matchedIndex);
-                            return;
-                        }
-                    }
-                }
+            if (itemLine <= currentLine) {
+                activeIndex = i; // activeIndex = (specificLine !== undefined) ? i : i + 1;
+            } else {
+                break;
             }
         }
 
-        // Editor Mode falls through to here
-        if (mode === 'source') {
-            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
-            let activeIndex = -1;
+        // 越界保护
+        if (activeIndex >= items.length) {
+            activeIndex = items.length - 1;
+        }
 
-            // let lastMatchedIndex = -1;
-
-            for (let i = 0; i < items.length; i++) {
-                const itemLine = parseInt(items[i].dataset.line || "0");
-
-                if (itemLine <= currentLine) {
-                    // lastMatchedIndex = i;
-                    // Always highlight the current header (the one we are 'in')
-                    // This matches the cursor behavior and prevents jumping between 'current' and 'next'
-                    activeIndex = (specificLine !== undefined) ? i : i + 1;
-                } else {
-                    break;
-                }
-            }
-
-            // 只在最后打印一次
-            // if (lastMatchedIndex >= 0) {
-            //     const item = items[lastMatchedIndex];
-            //     const itemText = (item.querySelector('.sspai-toc-text') as HTMLElement)?.innerText;
-            //     const itemLine = parseInt(item.dataset.line || "0");
-
-            //     console.log(
-            //         `[TOC Debug] Item "${itemText}" Line: ${itemLine}, CurrentLine: ${currentLine}`
-            //     );
-            // }
-
-            // 越界保护
-            if (activeIndex >= items.length) {
-                activeIndex = items.length - 1;
-            }
-
-            // Handle Top of Document: force highlight first item if scrolled to top
+        // Handle Top of Document: force highlight first item if scrolled to top
+        // @ts-ignore
+        if (view.editor) {
             // @ts-ignore
-            if (view.editor) {
-                // @ts-ignore
-                const scrollInfo = view.editor.getScrollInfo();
-                if (scrollInfo && scrollInfo.top < 50) {
-                    activeIndex = 0;
+            const scrollInfo = view.editor.getScrollInfo();
+            if (scrollInfo && scrollInfo.top < 50) {
+                activeIndex = 0;
+            }
+        }
+
+        if (activeIndex >= 0) {
+            this.lastActiveIndex = activeIndex;
+        }
+        this.updateActiveItem(items as HTMLElement[], activeIndex);
+    }
+
+    detectCurrentLineFromScroll(view: MarkdownView, scrollEl: HTMLElement | null): number {
+        if (!view.editor) return -1;
+
+        // @ts-ignore
+        const editorScrollInfo = view.editor.getScrollInfo();
+        let h = 800;
+        
+        if (scrollEl) {
+            h = scrollEl.clientHeight;
+        } else {
+            // @ts-ignore
+            if (editorScrollInfo.height) h = editorScrollInfo.height;
+        }
+
+        // Adjust offset for source mode to match preview behavior
+        // Smaller offset means we look closer to the top of screen
+        const userOffset = h / 3000;
+        const targetHeight = editorScrollInfo.top + userOffset;
+        let currentLine = -1;
+
+        const editorWithCm = view.editor as unknown as { cm: CodeMirrorEditor };
+        if (editorWithCm.cm) {
+            const cm = editorWithCm.cm;
+            try {
+                // Use screen coordinates (posAtCoords) for accurate "visual top" detection
+                // This bypasses issues with document padding, inline titles, etc.
+                let found = false;
+                if (scrollEl) {
+                    const rect = scrollEl.getBoundingClientRect();
+                    const topY = rect.top + (userOffset || 0);
+                    const padX = rect.left + 20;
+
+                    const pos = cm.posAtCoords({ x: padX, y: topY });
+                    if (pos !== null) {
+                        currentLine = cm.state.doc.lineAt(pos).number;
+                        found = true;
+                    }
                 }
+                
+                if (!found) {
+                    // Fallback to old lineBlockAtHeight if scrollEl missing (unlikely) or posAtCoords failed
+                    const block = cm.lineBlockAtHeight(targetHeight);
+                    if (block) {
+                        currentLine = cm.state.doc.lineAt(block.from).number;
+                    }
+                }
+            } catch (e) {
+                console.debug("TOC active line detection failed", e);
+            }
+        }
+        return currentLine;
+    }
+
+    highlightInPreviewMode(view: MarkdownView, scrollEl: HTMLElement | null) {
+        if (!this.containerEl || !scrollEl) return;
+
+        // Handle Top of Document: force highlight first item if scrolled to top
+        if (scrollEl.scrollTop < 50) {
+            const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+            if (items.length > 0) {
+                this.lastActiveIndex = 0;
+                this.updateActiveItem(items as HTMLElement[], 0);
+                return;
+            }
+        }
+
+        const userOffset = scrollEl.clientHeight / 2000;
+        const containerRect = scrollEl.getBoundingClientRect();
+        const targetTop = containerRect.top + userOffset - 20;
+
+        const domHeaders = Array.from(view.contentEl.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+            .filter(h => !h.closest('.markdown-embed') && !h.classList.contains('inline-title'));
+
+        let activeDomHeader: Element | null = null;
+
+        for (let i = 0; i < domHeaders.length; i++) {
+            const rect = domHeaders[i].getBoundingClientRect();
+
+            if (rect.top <= targetTop) {
+                activeDomHeader = domHeaders[i]; // activeDomHeader = domHeaders[i + 1] || domHeaders[i];
+            } else {
+                break;
+            }
+        }
+
+        if (activeDomHeader) {
+            let headerText = (activeDomHeader as HTMLElement).innerText;
+
+            if (!headerText) {
+                headerText = activeDomHeader.getAttribute('data-heading') || "";
             }
 
-            if (activeIndex >= 0) {
-                this.lastActiveIndex = activeIndex;
+            if (headerText) {
+                const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+
+                const tagName = activeDomHeader.tagName.toLowerCase(); 
+                const level = parseInt(tagName.replace('h', ''));
+
+                const matchingIndices: number[] = [];
+
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i] as HTMLElement;
+                    const itemLevel = parseInt(item.dataset.level || "0");
+                    const itemTextSpan = item.querySelector('.sspai-toc-text');
+                    const itemText = itemTextSpan ? (itemTextSpan as HTMLElement).innerText : "";
+
+                    if (itemLevel === level && itemText === headerText) {
+                        matchingIndices.push(i);
+                    }
+                }
+
+                let matchedIndex = -1;
+                if (matchingIndices.length === 1) {
+                    matchedIndex = matchingIndices[0]; // 
+                } else if (matchingIndices.length > 1) { 
+                    let minDistance = Infinity;
+                    let bestMatch = matchingIndices[0];
+
+                    for (const idx of matchingIndices) {
+                        const distance = Math.abs(idx - this.lastActiveIndex);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            bestMatch = idx;
+                        }
+                    }
+
+                    matchedIndex = bestMatch;
+                }
+
+                if (matchedIndex >= 0) {
+                    this.lastActiveIndex = matchedIndex;
+                    this.updateActiveItem(items as HTMLElement[], matchedIndex);
+                }
             }
-            this.updateActiveItem(items, activeIndex);
         }
     }
 

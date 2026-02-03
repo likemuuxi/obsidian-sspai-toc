@@ -180,7 +180,7 @@ export default class SspaiTocPlugin extends Plugin {
 
     updateTocPositions(headers: TocItem[]) { // 更新目录项位置信息 data-line
         if (!this.containerEl) return;
-        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
 
         if (items.length !== headers.length) {
             return;
@@ -345,7 +345,7 @@ export default class SspaiTocPlugin extends Plugin {
                 this.blockScrollEvent = true;
 
                 if (this.containerEl) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
                     this.updateActiveItem(items, index);
                 }
 

@@ -131,6 +131,7 @@ settings:
     /* Fixed height limitation */
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     z-index: 100;
     /* font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; */
     font-size: var(--toc-item-text-size);

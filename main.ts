@@ -253,16 +253,16 @@ export default class SspaiTocPlugin extends Plugin {
                     this.containerEl.removeClass('mobile-expanded');
                 }
             };
-            
+
             scrollEl.addEventListener('mousedown', resetBlock);
             this.eventRemovers.push(() => scrollEl.removeEventListener('mousedown', resetBlock));
-            
+
             scrollEl.addEventListener('wheel', resetBlock, { passive: true });
             this.eventRemovers.push(() => scrollEl.removeEventListener('wheel', resetBlock));
-            
+
             scrollEl.addEventListener('touchstart', resetBlock, { passive: true });
             this.eventRemovers.push(() => scrollEl.removeEventListener('touchstart', resetBlock));
-            
+
             scrollEl.addEventListener('keydown', resetBlock);
             this.eventRemovers.push(() => scrollEl.removeEventListener('keydown', resetBlock));
         }
@@ -281,18 +281,18 @@ export default class SspaiTocPlugin extends Plugin {
                     this.isUserInteracting = false;
                 }, 150);
             };
-            
+
             const contentEl = view.contentEl;
 
             contentEl.addEventListener('keyup', handler);
             this.eventRemovers.push(() => contentEl.removeEventListener('keyup', handler));
-            
+
             contentEl.addEventListener('mouseup', handler);
             this.eventRemovers.push(() => contentEl.removeEventListener('mouseup', handler));
-            
+
             contentEl.addEventListener('touchend', handler);
             this.eventRemovers.push(() => contentEl.removeEventListener('touchend', handler));
-            
+
             contentEl.addEventListener('click', handler);
             this.eventRemovers.push(() => contentEl.removeEventListener('click', handler));
         }
@@ -439,7 +439,7 @@ export default class SspaiTocPlugin extends Plugin {
         // @ts-ignore
         const editorScrollInfo = view.editor.getScrollInfo();
         let h = 800;
-        
+
         if (scrollEl) {
             h = scrollEl.clientHeight;
         } else {
@@ -471,7 +471,7 @@ export default class SspaiTocPlugin extends Plugin {
                         found = true;
                     }
                 }
-                
+
                 if (!found) {
                     // Fallback to old lineBlockAtHeight if scrollEl missing (unlikely) or posAtCoords failed
                     const block = cm.lineBlockAtHeight(targetHeight);
@@ -528,7 +528,7 @@ export default class SspaiTocPlugin extends Plugin {
             if (headerText) {
                 const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
-                const tagName = activeDomHeader.tagName.toLowerCase(); 
+                const tagName = activeDomHeader.tagName.toLowerCase();
                 const level = parseInt(tagName.replace('h', ''));
 
                 const matchingIndices: number[] = [];
@@ -547,7 +547,7 @@ export default class SspaiTocPlugin extends Plugin {
                 let matchedIndex = -1;
                 if (matchingIndices.length === 1) {
                     matchedIndex = matchingIndices[0]; // 
-                } else if (matchingIndices.length > 1) { 
+                } else if (matchingIndices.length > 1) {
                     let minDistance = Infinity;
                     let bestMatch = matchingIndices[0];
 
@@ -613,7 +613,22 @@ export default class SspaiTocPlugin extends Plugin {
 
         // Ensure active item is visible in TOC
         if (newActiveIndex !== -1) {
-            items[newActiveIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+            // items[newActiveIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
+            // Use scrollTop to prevent scrolling parent containers
+            const activeItem = items[newActiveIndex] as HTMLElement;
+            if (activeItem && this.containerEl) {
+                const containerHeight = this.containerEl.clientHeight;
+                const itemTop = activeItem.offsetTop;
+                const itemHeight = activeItem.clientHeight;
+
+                // Calculate target scroll position to center the item
+                const targetScrollTop = itemTop - (containerHeight / 2) + (itemHeight / 2);
+
+                this.containerEl.scrollTo({
+                    top: targetScrollTop,
+                    behavior: 'smooth'
+                });
+            }
         }
     }
 

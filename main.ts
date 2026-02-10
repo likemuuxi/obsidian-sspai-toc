@@ -183,9 +183,7 @@ export default class SspaiTocPlugin extends Plugin {
         const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
         // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
-        if (items.length !== headers.length) {
-            return;
-        }
+        if (items.length !== headers.length) return;
 
         items.forEach((item, index) => {
             if (headers[index]) {

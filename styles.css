@@ -110,8 +110,6 @@ settings:
 		default: '#202020'
 */
 
-/* Sspai Style Floating TOC - Minimalist Design */
-
 :root {
     --toc-item-text-size: 13px;
     --toc-container-height: 50vh;
@@ -119,29 +117,30 @@ settings:
     --compact-toc-container-width: 260px;
 }
 
-/* 1. Default Style */
+/* ============================================
+   TOC CONTAINER STYLES
+   ============================================ 
+*/
 .sspai-toc-container {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     right: 24px;
     width: var(--toc-container-width);
-    /* Fixed width */
     max-height: var(--toc-container-height);
-    /* Fixed height limitation */
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior: contain;
     z-index: 100;
-    /* font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; */
     font-size: var(--toc-item-text-size);
     background: transparent;
     padding: 8px 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
-    /* transition: opacity 0.3s ease, visibility 0.3s ease; */
     opacity: 1;
     visibility: visible;
+    scrollbar-width: none;
+}
+
+.sspai-toc-container::-webkit-scrollbar {
+    display: none;
 }
 
 /* For long lists (>15 items), add extra padding to allow centering first/last items */
@@ -150,157 +149,130 @@ settings:
     padding-bottom: 22vh;
 }
 
-/* 2. Hidden State */
 .sspai-toc-container.hidden {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
 }
 
-.sspai-toc-container::-webkit-scrollbar {
-    width: 4px;
-}
-
-.sspai-toc-container::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-}
-
-.sspai-toc-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
+/* ============================================
+   TOC ITEM STYLES
+   ============================================ 
+*/
 .sspai-toc-item {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 6px 0;
-    padding-left: 32px;
-    /* Fixed gutter for text alignment */
+    padding: 6px 0 6px 32px;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     color: transparent;
-    /* Hide text by default */
 }
 
-/* Text styling wrapper */
+.sspai-toc-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: block;
+    width: 16px;
+    height: 4px;
+    background-color: var(--text-faint);
+    border-radius: 4px;
+    margin-right: 0;
+}
+
+.sspai-toc-item.active {
+    color: var(--text-normal);
+    font-weight: 700;
+}
+
+.sspai-toc-item.active::before {
+    width: 24px;
+    background-color: var(--interactive-accent);
+}
+
+.sspai-toc-item.parent-visible {
+    color: var(--text-muted);
+}
+
+.sspai-toc-item.parent-visible::before {
+    width: 18px;
+    background-color: var(--text-muted);
+}
+
+
+/* HOVER ON CONTAINER */
+.sspai-toc-container:hover .sspai-toc-item,
+.sspai-toc-container:hover .sspai-toc-item.parent-visible {
+    color: var(--text-muted);
+}
+
+.sspai-toc-container:hover .sspai-toc-item.active {
+    color: var(--text-normal);
+    font-weight: 700;
+}
+
+.sspai-toc-container:hover .sspai-toc-item:hover {
+    color: var(--text-normal);
+}
+
+.sspai-toc-container:hover .sspai-toc-item:hover::before {
+    background-color: var(--text-muted);
+}
+
+/* ANIMATIONS */
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sspai-toc-item.active,
+.sspai-toc-item.parent-visible {
+    animation: fadeInSlide 0.2s ease-out;
+}
+
+/* DARK MODE */
+.theme-dark .sspai-toc-item::before {
+    background-color: var(--text-faint);
+}
+
+.theme-dark .sspai-toc-item.active::before {
+    background-color: var(--interactive-accent);
+}
+
+.theme-dark .sspai-toc-item.parent-visible::before {
+    background-color: var(--text-muted);
+}
+
+.theme-dark .sspai-toc-container:hover .sspai-toc-item:hover::before {
+    background-color: var(--text-muted);
+}
+
+/* ============================================
+   TOC ITEM TEXT STYLES
+   ============================================ 
+*/
 .sspai-toc-text {
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    /* Determine text visibility via parent color */
     color: inherit;
-    /* transition: inherit; */
-    /* Remove padding/margin that might cause misalignment */
     font-size: var(--toc-item-text-size);
 }
 
-/* 
-.sspai-toc-text {
-    display: inline-block;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
-    background: var(--background-primary);
-    border-radius: 4px;
-} */
-
-/* The dash indicator */
-.sspai-toc-item::before {
-    content: '';
-    position: absolute;
-    /* Absolute positioning to not affect text flow */
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-
-    display: block;
-    width: 16px;
-    height: 4px;
-    /* Thicker dash */
-    background-color: var(--text-faint, #d1d5db);
-    border-radius: 4px;
-    /* Rounded corners */
-    margin-right: 0;
-    /* No margin needed with absolute positioning */
-    /* transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); */
-}
 
 /* ============================================
-   VISIBILITY LOGIC
-   ============================================ */
-
-/* Show text for active item */
-.sspai-toc-item.active {
-    color: var(--text-normal, #1f2937);
-    font-weight: 700;
-    /* Bold active title */
-}
-
-.sspai-toc-item.active::before {
-    width: 24px;
-    height: 4px;
-    /* Consistent active thickness */
-    background-color: var(--interactive-accent, #d94d22);
-}
-
-/* Show text for parent headings (muted style) */
-/* Restore: Show parent text for context, matching Sspai style */
-.sspai-toc-item.parent-visible {
-    color: var(--text-muted, #9ca3af);
-    font-weight: 400;
-}
-
-.sspai-toc-item.parent-visible::before {
-    width: 18px;
-    background-color: var(--text-muted, #9ca3af);
-}
-
-/* Hide scrollbar completely to match Sspai minimalist look */
-.sspai-toc-container::-webkit-scrollbar {
-    display: none;
-}
-
-.sspai-toc-container {
-    scrollbar-width: none;
-}
-
-/* ============================================
-   HOVER ON CONTAINER
-   ============================================ */
-.sspai-toc-container:hover .sspai-toc-item {
-    color: var(--text-muted, #6b7280);
-}
-
-.sspai-toc-container:hover .sspai-toc-item.active {
-    color: var(--text-normal, #1f2937);
-    font-weight: 700;
-}
-
-.sspai-toc-container:hover .sspai-toc-item.parent-visible {
-    color: var(--text-muted, #6b7280);
-}
-
-/* Single item hover highlight */
-.sspai-toc-container:hover .sspai-toc-item:hover {
-    color: var(--text-normal, #1f2937);
-}
-
-/* .sspai-toc-container:hover .sspai-toc-item:hover {
-    color: var(--interactive-accent) !important;
-    opacity: 1 !important;
-} */
-
-.sspai-toc-container:hover .sspai-toc-item:hover::before {
-    background-color: var(--text-muted, #6b7280);
-    /* Width change removed to keep level indication stable */
-}
-
-/* ============================================
-   LEVEL-BASED INDICATOR LENGTH
+   HEADING LEVEL STYLES
    ============================================ */
 .sspai-toc-level-1::before {
     width: 20px;
@@ -326,25 +298,207 @@ settings:
     width: 4px;
 }
 
-/* Active overrides indicator length - Update: Keep level width, only change height/color */
-.sspai-toc-item.active.sspai-toc-level-1::before,
-.sspai-toc-item.active.sspai-toc-level-2::before,
-.sspai-toc-item.active.sspai-toc-level-3::before,
-.sspai-toc-item.active.sspai-toc-level-4::before,
-.sspai-toc-item.active.sspai-toc-level-5::before,
-.sspai-toc-item.active.sspai-toc-level-6::before {
-    /* width constraint removed to use level defaults */
-    height: 4px;
+/* ============================================
+   COMPACT MODE (Right-Aligned Minimalist)
+   ============================================ */
+
+.sspai-toc-container.compact {
+    right: 12px;
+    background: transparent;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: var(--toc-container-height);
 }
 
-/* Parent-visible overrides - Update: Keep level width */
-.sspai-toc-item.parent-visible.sspai-toc-level-1::before,
-.sspai-toc-item.parent-visible.sspai-toc-level-2::before,
-.sspai-toc-item.parent-visible.sspai-toc-level-3::before,
-.sspai-toc-item.parent-visible.sspai-toc-level-4::before,
-.sspai-toc-item.parent-visible.sspai-toc-level-5::before,
-.sspai-toc-item.parent-visible.sspai-toc-level-6::before {
-    /* width constraint removed */
+.sspai-toc-container.compact:not(:hover) {
+    width: 300px;
+    right: 12px;
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid transparent;
+    pointer-events: none;
+}
+
+.sspai-toc-container.compact:hover,
+.sspai-toc-container.compact.mobile-expanded {
+    width: var(--compact-toc-container-width);
+    max-height: var(--toc-container-height);
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    z-index: 1000;
+    padding-left: 4px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item::before {
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 10px;
+    border: none;
+    border-radius: 99px;
+    background-color: var(--text-faint);
+}
+
+.sspai-toc-container.compact .sspai-toc-item.parent-visible::before {
+    background-color: var(--text-muted);
+}
+
+.sspai-toc-container.compact .sspai-toc-item.active::before {
+    width: 28px !important;
+    background-color: var(--interactive-accent);
+    padding-right: 12px;
+    opacity: 1;
+}
+
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item {
+    pointer-events: auto;
+    min-height: 32px;
+    box-sizing: border-box;
+    width: 50px;
+    margin-left: auto;
+}
+
+.sspai-toc-container.compact:not(:hover) .sspai-toc-text {
+    opacity: 0;
+    visibility: hidden;
+    display: none;
+    max-width: 200px;
+    font-size: var(--toc-item-text-size);
+}
+
+/* Reset layout for expanded items to standard Left-Aligned Outline */
+.sspai-toc-container.compact:hover .sspai-toc-item,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item {
+    justify-content: flex-start;
+    text-align: left;
+    padding-right: 48px;
+    min-height: 32px;
+    box-sizing: border-box;
+    transition: none !important;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-text,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-text {
+    opacity: 1;
+    visibility: visible;
+    display: block;
+    border-radius: 8px;
+    padding-right: 0;
+}
+
+/* .sspai-toc-container.compact:hover .sspai-toc-item.active::before,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.active::before,
+.sspai-toc-container.compact:hover .sspai-toc-item.parent-visible::before,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.parent-visible::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px !important;
+    height: 16px;
+    border-radius: 4px;
+    display: block;
+    z-index: 1;
+    right: auto !important;
+    padding: 0 !important;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.active::before,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.active::before {
+    background-color: var(--interactive-accent);
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.parent-visible::before,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.parent-visible::before {
+    background-color: var(--background-modifier-border);
+} */
+
+/* Tooltip */
+.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text,
+.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
+    display: block;
+    position: absolute;
+    right: 45px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    background-color: var(--background-primary);
+    padding: 4px 8px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    white-space: nowrap;
+    font-size: var(--toc-item-text-size);
+    color: var(--text-normal);
+
+    opacity: 1;
+    visibility: visible;
+    z-index: 1001;
+
+    pointer-events: none;
+}
+
+.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
+    color: var(--text-muted);
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-1,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-1 {
+    padding-left: 12px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-2,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-2 {
+    padding-left: 24px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-3,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-3 {
+    padding-left: 36px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-4,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-4 {
+    padding-left: 48px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-5,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-5 {
+    padding-left: 60px;
+}
+
+.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-6,
+.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-6 {
+    padding-left: 72px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-1::before {
+    width: 24px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-2::before {
+    width: 18px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-3::before {
+    width: 14px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-4::before {
+    width: 10px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-5::before {
+    width: 8px;
+}
+
+.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-6::before {
+    width: 6px;
 }
 
 /* ============================================
@@ -465,264 +619,3 @@ settings:
     color: var(--toc-h6-color);
     opacity: 1;
 } */
-
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-@keyframes fadeInSlide {
-    from {
-        opacity: 0;
-        transform: translateX(-4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-.sspai-toc-item.active,
-.sspai-toc-item.parent-visible {
-    animation: fadeInSlide 0.2s ease-out;
-}
-
-/* ============================================
-   DARK MODE
-   ============================================ */
-.theme-dark .sspai-toc-item::before {
-    background-color: var(--text-faint, #4b5563);
-}
-
-.theme-dark .sspai-toc-item.active::before {
-    background-color: var(--interactive-accent, #d94d22);
-}
-
-.theme-dark .sspai-toc-item.parent-visible::before {
-    background-color: var(--text-muted, #6b7280);
-}
-
-.theme-dark .sspai-toc-container:hover .sspai-toc-item:hover::before {
-    background-color: var(--text-muted, #9ca3af);
-}
-
-/* ============================================
-   COMPACT MODE (Right-Aligned Minimalist)
-   ============================================ */
-
-/* 1. Base Structure for Compact Mode (Applied ALWAYS) */
-.sspai-toc-container.compact {
-    right: 12px;
-    background: transparent;
-    padding-top: 16px;
-    padding-bottom: 16px;
-
-    overflow-x: hidden;
-    overflow-y: auto;
-    max-height: var(--toc-container-height);
-}
-
-/* Indicators: Locked to RIGHT */
-.sspai-toc-container.compact .sspai-toc-item::before {
-    left: auto;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    right: 10px;
-    border: none;
-    border-radius: 99px;
-    /* Pill shape */
-    /* Variable width base (defaults to level specific below) */
-    background-color: var(--text-faint);
-}
-
-/* Adjust Indicators in Expanded Mode: Add margin from right edge */
-.sspai-toc-container.compact:hover .sspai-toc-item::before,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item::before {
-    right: 10px;
-    /* Add spacing from container edge */
-}
-
-/* Variable Lengths based on Header Level in Compact Mode */
-.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-1::before {
-    width: 24px;
-}
-
-.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-2::before {
-    width: 18px;
-}
-
-.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-3::before {
-    width: 14px;
-}
-
-.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-4::before {
-    width: 10px;
-}
-
-.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-5::before {
-    width: 8px;
-}
-
-.sspai-toc-container.compact .sspai-toc-item.sspai-toc-level-6::before {
-    width: 6px;
-}
-
-/* Active Highlight: Longer and Darker */
-.sspai-toc-container.compact .sspai-toc-item.active::before {
-    width: 28px !important;
-    /* Make active slightly longer than the longest inactive (H1) */
-    background-color: var(--interactive-accent);
-    padding-right: 12px;
-    opacity: 1;
-}
-
-/* Parent Visible: Subtle */
-.sspai-toc-container.compact .sspai-toc-item.parent-visible::before {
-    background-color: var(--text-muted);
-}
-
-/* 2. STATE: COLLAPSED (Not Hovered) */
-.sspai-toc-container.compact:not(:hover) {
-    /* Use Wide Invisible Container technique to allow tooltips + scrolling */
-    width: 300px;
-    right: 12px;
-    background: transparent;
-    box-shadow: none;
-    border: 1px solid transparent;
-    pointer-events: none;
-    /* Let clicks pass through empty space */
-}
-
-.sspai-toc-container.compact:not(:hover) .sspai-toc-item {
-    pointer-events: auto;
-    /* Items remain clickable */
-    min-height: 32px;
-    /* Force height to match normal mode (Text + Padding) so spacing is consistent */
-    box-sizing: border-box;
-    /* Ensure padding is included */
-
-    /* FIX: Constrain trigger area to just the bars */
-    width: 50px;
-    margin-left: auto;
-    /* Align to right side of the wide container */
-}
-
-/* Hide Text by default */
-.sspai-toc-container.compact:not(:hover) .sspai-toc-text {
-    opacity: 0;
-    visibility: hidden;
-    display: none;
-    max-width: 200px;
-    font-size: var(--toc-item-text-size);
-}
-
-/* SHOW ACTIVE & PARENT ITEM TOOLTIPS */
-.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.active .sspai-toc-text,
-.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
-    display: block;
-    position: absolute;
-    right: 40px;
-    /* Left of the bar */
-    top: 50%;
-    transform: translateY(-50%);
-
-    background-color: var(--background-primary);
-    padding: 4px 8px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-
-    white-space: nowrap;
-    font-size: var(--toc-item-text-size);
-    color: var(--text-normal);
-
-    opacity: 1;
-    visibility: visible;
-    z-index: 1001;
-
-    /* FIX: Prevent tooltip from triggering hover expansion */
-    pointer-events: none;
-}
-
-/* Optional: Make parent tooltips slightly more subtle or different color? 
-   Refencing normal mode: parent-visible is usually muted.
-   Let's check normal mode .parent-visible style.
-   Line 132: color: var(--text-muted);
-*/
-.compact-mode-show-tooltip .sspai-toc-container.compact:not(:hover) .sspai-toc-item.parent-visible .sspai-toc-text {
-    color: var(--text-muted);
-}
-
-/* 3. STATE: EXPANDED (Hovered) */
-/* Disable transition during expansion for instant effect */
-.sspai-toc-container.compact:hover .sspai-toc-item,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item {
-    transition: none !important;
-}
-
-.sspai-toc-container.compact:hover,
-.sspai-toc-container.compact.mobile-expanded {
-    width: var(--compact-toc-container-width);
-    max-height: var(--toc-container-height);
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 12px;
-    z-index: 1000;
-}
-
-/* Reset layout for expanded items to standard Left-Aligned Outline */
-.sspai-toc-container.compact:hover .sspai-toc-item,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item {
-    justify-content: flex-start;
-    /* Align start (left) */
-    text-align: left;
-    padding-right: 32px;
-    /* Items remain clickable */
-    min-height: 32px;
-    /* Force height to match normal mode (Text + Padding) so spacing is consistent */
-    box-sizing: border-box;
-    /* Increased separation for bars on right */
-}
-
-.sspai-toc-container.compact:hover .sspai-toc-text,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-text {
-    opacity: 1;
-    visibility: visible;
-    display: block;
-
-    /* Ensure text is nicely spaced from the bar */
-    border-radius: 8px;
-    padding-right: 0;
-    /* Remove right padding used for right-align */
-}
-
-/* 4. EXPANDED INDENTATION (Obsidian Outline Style) */
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-1,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-1 {
-    padding-left: 12px;
-}
-
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-2,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-2 {
-    padding-left: 24px;
-}
-
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-3,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-3 {
-    padding-left: 36px;
-}
-
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-4,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-4 {
-    padding-left: 48px;
-}
-
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-5,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-5 {
-    padding-left: 60px;
-}
-
-.sspai-toc-container.compact:hover .sspai-toc-item.sspai-toc-level-6,
-.sspai-toc-container.compact.mobile-expanded .sspai-toc-item.sspai-toc-level-6 {
-    padding-left: 72px;
-}

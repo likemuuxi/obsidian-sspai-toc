@@ -180,8 +180,8 @@ export default class SspaiTocPlugin extends Plugin {
 
     updateTocPositions(headers: TocItem[]) { // 更新目录项位置信息 data-line
         if (!this.containerEl) return;
-        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
-        // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+        // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
 
         if (items.length !== headers.length) return;
 
@@ -344,8 +344,8 @@ export default class SspaiTocPlugin extends Plugin {
                 this.blockScrollEvent = true;
 
                 if (this.containerEl) {
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
-                    // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+                    // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
+                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
                     this.updateActiveItem(items, index);
                 }
 
@@ -615,8 +615,8 @@ export default class SspaiTocPlugin extends Plugin {
         if (newActiveIndex !== -1) {
             // items[newActiveIndex].scrollIntoView({ block: 'center', behavior: 'smooth' });
             // Use scrollTop to prevent scrolling parent containers
-            const activeItem = items[newActiveIndex] as HTMLElement;
-            // const activeItem = items[newActiveIndex];
+            // const activeItem = items[newActiveIndex] as HTMLElement;
+            const activeItem = items[newActiveIndex];
             if (activeItem && this.containerEl) {
                 const containerHeight = this.containerEl.clientHeight;
                 const itemTop = activeItem.offsetTop;

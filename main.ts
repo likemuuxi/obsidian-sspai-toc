@@ -34,7 +34,7 @@ export default class SspaiTocPlugin extends Plugin {
         this.debouncedUpdate = debounce(this.updateToc.bind(this), 100, true);
 
         this.registerEvent(
-            this.app.workspace.on('active-leaf-change', (leaf) => {
+            this.app.workspace.on('active-leaf-change', () => {
                 this.updateToc();
             })
         );
@@ -181,7 +181,7 @@ export default class SspaiTocPlugin extends Plugin {
     updateTocPositions(headers: TocItem[]) { // 更新目录项位置信息 data-line
         if (!this.containerEl) return;
         // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
-        const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+        const items = Array.from(this.containerEl.querySelectorAll<HTMLElement>('.sspai-toc-item'));
 
         if (items.length !== headers.length) return;
 
@@ -329,7 +329,8 @@ export default class SspaiTocPlugin extends Plugin {
             item.onClickEvent(async (event) => {
                 event.preventDefault();
 
-                if (!view.file) return;
+                const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
+                if (!currentView || !currentView.file) return;
 
                 // Mobile specific behavior: First touch expands, second touch jumps
                 if (Platform.isMobile && this.containerEl && this.containerEl.classList.contains('compact')) {
@@ -345,13 +346,13 @@ export default class SspaiTocPlugin extends Plugin {
 
                 if (this.containerEl) {
                     // const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item')) as HTMLElement[];
-                    const items = Array.from(this.containerEl.querySelectorAll('.sspai-toc-item'));
+                    const items = Array.from(this.containerEl.querySelectorAll<HTMLElement>('.sspai-toc-item'));
                     this.updateActiveItem(items, index);
                 }
 
-                const mode = view.getMode();
+                const mode = currentView.getMode();
                 const line = parseInt(item.getAttribute('data-line') || "0");
-                await view.leaf.openFile(view.file, {
+                await currentView.leaf.openFile(currentView.file, {
                     eState: {
                         line: line,
                         mode: mode

@@ -327,10 +327,15 @@ settings:
 }
 
 .sspai-toc-container.compact:not(:hover) .sspai-toc-item {
-    pointer-events: auto;
+    pointer-events: none;
     min-height: 32px;
     box-sizing: border-box;
     margin-left: auto;
+}
+
+/* Only the ::before indicator bar triggers expansion in compact mode */
+.sspai-toc-container.compact:not(:hover) .sspai-toc-item::before {
+    pointer-events: auto;
 }
 
 .sspai-toc-container.compact:not(:hover) .sspai-toc-text {
